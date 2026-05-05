@@ -24,7 +24,7 @@ EEPROM::EEPROM()
         filename = NULL;
 }
 
-void EEPROM::begin (int s)
+const char *EEPROM::getFilename(void)
 {
         // establish file name
 	if (!filename) {
@@ -40,10 +40,22 @@ void EEPROM::begin (int s)
 	    filename = strdup (newfn.c_str());
 	}
 
-        // start over if called again
+        return (filename);
+}
+
+void EEPROM::begin (int s)
+{
+        // establish filename
+        filename = getFilename();
+
+        // start over if called again or force
         if (fp) {
             fclose(fp);
             fp = NULL;
+        }
+        if (rm_eeprom) {
+            (void) unlink (filename);
+            rm_eeprom = false;  // only once!
         }
         if (data_array) {
             free (data_array);
@@ -52,43 +64,46 @@ void EEPROM::begin (int s)
 
         // open RW, create if new owned by real user
 	fp = fopen (filename, "r+");
-        if (fp) {
-            printf ("EEPROM %s: open ok\n", filename);
-        } else {
+        if (!fp) {
             fp = fopen (filename, "w+");
-            if (fp)
-                printf ("EEPROM %s: create ok\n", filename);
-            else {
-                fatalError ("EEPROM %s:\ncreate failed:\n%s\n", filename, strerror(errno));
-                // never returns
+            if (!fp) {
+                fprintf (stderr, "%s: %s\n", filename, strerror(errno));
+                exit(1);
             }
         }
-        fchown (fileno(fp), getuid(), getgid());
+        (void) !fchown (fileno(fp), getuid(), getgid());
 
         // check lock
-        if (flock (fileno(fp), LOCK_EX|LOCK_NB) < 0)
-            fatalError ("Another instance of HamClock has been detected.\n"
-                        "Only one at a time is allowed or use the -d argument to give each\n"
-                        "a separate working directory.");
+        if (flock (fileno(fp), LOCK_EX|LOCK_NB) < 0) {
+            fprintf (stderr, "Another instance of HamClock has been detected.\n"
+                        "Only one at a time is allowed or use -d, -e and -w to make each unique.\n");
+            exit(1);
+        }
 
         // malloc memory, init as zeros
         n_data_array = s;
         data_array = (uint8_t *) calloc (n_data_array, sizeof(uint8_t));
 
-        // init data_array from file .. support old version of random memory locations
+        // init data_array from file .. support old version of random memory locations ...
+        // and another old version with bug that wrote valid locations a second time with zeros.
 	char line[64];
-	unsigned int a, b;
+	unsigned int a, v;
+        unsigned int largest_a = 0;
 	while (fp && fgets (line, sizeof(line), fp)) {
-	    // sscanf (line, "%x %x", &a, &b); printf ("R: %08X %02X\n", a, b);
-	    if (sscanf (line, "%x %x", &a, &b) == 2 && a < n_data_array)
-                data_array[a] = b;
+	    if (sscanf (line, "%x %x", &a, &v) == 2 && a < n_data_array && a >= largest_a) {
+                data_array[a] = v;
+                largest_a = a;
+            }
         }
 }
 
 bool EEPROM::commit(void)
 {
         // (over)write entire data_array array
-        fseek (fp, 0L, SEEK_SET);
+        if (ftruncate (fileno(fp), 0) < 0 || fseek (fp, 0L, SEEK_SET) < 0) {
+            printf ("eeprom: %s\n", strerror(errno));
+            return (false);
+        }
         for (unsigned a = 0; a < n_data_array; a++)
             fprintf (fp, "%08X %02X\n", a, data_array[a]);
         fflush (fp);
@@ -100,7 +115,11 @@ bool EEPROM::commit(void)
 void EEPROM::write (uint32_t address, uint8_t byte)
 {
         // set array if available and address is in bounds
-        if (data_array && address < n_data_array)
+        if (!data_array)
+            printf ("EEPROM.write: no data_array\n");
+        else if (address >= n_data_array)
+            printf ("EEPROM.write: %d >= %d\n", address, (int)n_data_array);
+        else 
             data_array[address] = byte;
 }
 

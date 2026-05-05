@@ -8,14 +8,18 @@ class WiFiServer {
     public:
 
 	WiFiServer(int newport);
-	void begin();
+	bool begin(char ynot[]);
 	WiFiClient available();
         void stop();
+
+        // non-standard
+        WiFiClient next();
 
     private:
 
 	int port;
 	int socket;
+
 };
 
 

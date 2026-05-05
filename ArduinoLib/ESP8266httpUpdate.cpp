@@ -14,8 +14,8 @@ class ESPhttpUpdate ESPhttpUpdate;
 
 
 // approximate number of lines generated when running unzip and make, used for progress meter.
-#define N_UNZIP_LINES   90
-#define N_MAKE_LINES    72
+#define N_UNZIP_LINES   179
+#define N_MAKE_LINES    133
 
 
 ESPhttpUpdate::ESPhttpUpdate()
@@ -70,9 +70,9 @@ bool ESPhttpUpdate::runCommand (bool use_euid, int p0, int p1, int pn, const cha
 
             // set uid for sh if need euid
             if (use_euid)
-                setuid(geteuid());
+                (void) !setuid(geteuid());
             else
-                seteuid(getuid());
+                (void) !seteuid(getuid());
             // printf ("OTA: uid %d euid %d\n", getuid(), geteuid());
 
             // go
@@ -97,8 +97,8 @@ bool ESPhttpUpdate::runCommand (bool use_euid, int p0, int p1, int pn, const cha
         // parent arranges to read from pipe_fd[0] from child until EOF
         FILE *rsp_fp = fdopen (pipe_fd[0], "r");
 
-        // read and log output, report progress if desired
-        for (int nlines = 0; ; nlines++) {
+        // read and log output until EOF, report progress if desired
+        for (int nlines = 0; true; nlines++) {
 
             if (want_cb) {
                 int percent = p0 + nlines*(p1 - p0)/pn;
@@ -107,7 +107,7 @@ bool ESPhttpUpdate::runCommand (bool use_euid, int p0, int p1, int pn, const cha
                 (*progressCB) (percent, 100);
             }
 
-            char rsp[1000];
+            char rsp[10000];
             if (!fgets (rsp, sizeof(rsp), rsp_fp))
                 break;
             prError ("%s", rsp);                // already includes nl
@@ -260,11 +260,11 @@ t_httpUpdate_return ESPhttpUpdate::update(WiFiClient &client, const char *url)
         srand (time(NULL));
         snprintf (tmp_dir, sizeof(tmp_dir), "/tmp/HamClock-tmp-%010d.d", rand());
         printf ("OTA: creating %s\n", tmp_dir);
-	if (!runCommand (false, 1, 5, 1, "mkdir %s", tmp_dir))
+	if (!runCommand (false, 1, 2, 1, "mkdir %s", tmp_dir))
 	    return (HTTP_UPDATE_FAILED);
 
 	// download url into tmp_dir naming it zip_file
-	if (!runCommand (false, 5, 10, 1, "curl --retry 3 --silent --show-error --output '%s/%s' '%s'",
+	if (!runCommand (false, 2, 8, 1, "curl --max-time 15 --retry 2 --silent --show-error --output '%s/%s' '%s'",
                                                                 tmp_dir, zip_file, url)) {
             cleanupDir (tmp_dir);
 	    return (HTTP_UPDATE_FAILED);
@@ -286,20 +286,25 @@ t_httpUpdate_return ESPhttpUpdate::update(WiFiClient &client, const char *url)
         printf ("OTA: zip will create dir %s\n", make_dir);
 
 	// explode
-	if (!runCommand (false, 10, 15, N_UNZIP_LINES, "cd %s && unzip %s", tmp_dir, zip_file)) {
+	if (!runCommand (false, 8, 12, N_UNZIP_LINES, "cd %s && unzip %s", tmp_dir, zip_file)) {
             cleanupDir (tmp_dir);
 	    return (HTTP_UPDATE_FAILED);
         }
 
 	// within the new source tree, make the same target we were made with
         printf ("OTA: making %s\n", our_make);
+
+        // use all but one core for building
+        int ncores = sysconf(_SC_NPROCESSORS_ONLN);
+        int j = ncores > 1 ? ncores - 1 : 1;  // use n-1 cores, but at least 1
+
     #ifdef _IS_FREEBSD
-	if (!runCommand (false, 15, 95, N_MAKE_LINES, "cd %s/%s && gmake -j 4 %s",tmp_dir,make_dir,our_make)) {
+	if (!runCommand (false, 12, 99, N_MAKE_LINES, "cd %s/%s && gmake -j %d %s %s", tmp_dir, make_dir, j, build_variables, our_make)) {
     #else
-	if (!runCommand (false, 15, 95, N_MAKE_LINES, "cd %s/%s && make -j 4 %s",tmp_dir,make_dir,our_make)) {
+	if (!runCommand (false, 12, 99, N_MAKE_LINES, "cd %s/%s && make -j %d %s %s", tmp_dir, make_dir, j, build_variables, our_make)) {
     #endif
             cleanupDir (tmp_dir);
-	    return (HTTP_UPDATE_FAILED);
+	        return (HTTP_UPDATE_FAILED);
         }
 
         // get the mode of the currently running file before we remove it
@@ -310,7 +315,7 @@ t_httpUpdate_return ESPhttpUpdate::update(WiFiClient &client, const char *url)
 	}
 
         // replace current program file with new one, we already think we can remove it if we are euid
-	if (!runCommand (true, 95, 98, 1, "rm -f %s && mv %s/%s/%s %s", our_path,
+	if (!runCommand (true, 99, 100, 1, "rm -f %s && mv %s/%s/%s %s", our_path,
                                                 tmp_dir, make_dir, our_make, our_path)) {
             cleanupDir (tmp_dir);
 	    return (HTTP_UPDATE_FAILED);
@@ -332,7 +337,7 @@ t_httpUpdate_return ESPhttpUpdate::update(WiFiClient &client, const char *url)
 
 	// close all connections and execute over ourselves -- never returns if works
         printf ("OTA: restarting new version\n");
-        ESP.restart();
+        ESP.restart(false, false);
 
 	// darn! will never get here if successful
         prError ("OTA: restart failed\n");
@@ -352,17 +357,17 @@ int ESPhttpUpdate::getLastError(void)
 
 String ESPhttpUpdate::getLastErrorString(void)
 {
-        // collect lines
-        // N.B. don't bother to reclaim memory, we know this is fatal
+        // collect lines, oldest first
+        // N.B. don't worry about reclaiming memory, we know this is fatal
         char *err_msg = strdup("");
-        int err_msg_len = 0;
         for (int i = 0; i < MAXERRLINES; i++) {
-            char *el = err_lines_q[(err_lines_head+i)%MAXERRLINES];
-            if (el) {
-                int ll = strlen (el);
-                err_msg = (char *) realloc (err_msg, err_msg_len + ll + 1);
-                strcpy (err_msg+err_msg_len, el);
-                err_msg_len += ll;
+            char *err_line = err_lines_q[(err_lines_head+i)%MAXERRLINES];
+            if (err_line) {
+                // append to err_msg
+                size_t el = strlen (err_msg);
+                size_t ll = strlen (err_line);
+                err_msg = (char *) realloc (err_msg, el + ll + 1);              // +1 EOS
+                strcpy (err_msg+el, err_line);
             }
         }
 
@@ -373,7 +378,7 @@ String ESPhttpUpdate::getLastErrorString(void)
 void ESPhttpUpdate::prError (const char *fmt, ...)
 {
         // format
-        char msg[1000];
+        char msg[10000];
         va_list ap;
         va_start (ap, fmt);
         vsnprintf (msg, sizeof(msg), fmt, ap);
