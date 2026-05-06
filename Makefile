@@ -205,19 +205,19 @@ hamclock: hamclock-800x480
 
 hamclock-800x480: CXXFLAGS+=-D_USE_X11
 hamclock-800x480: LIBS+=-lX11
-hamclock-800x480: $(OBJS) hclibs
+hamclock-800x480: superclean $(OBJS) hclibs
 	$(CXX) $(LDXXFLAGS) $(OBJS) -o $@ $(LIBS)
 
 
 hamclock-1600x960: CXXFLAGS+=-D_USE_X11 -D_CLOCK_1600x960
 hamclock-1600x960: LIBS+=-lX11
-hamclock-1600x960: $(OBJS) hclibs
+hamclock-1600x960: superclean $(OBJS) hclibs
 	$(CXX) $(LDXXFLAGS) $(OBJS) -o $@ $(LIBS)
 
 
 hamclock-2400x1440: CXXFLAGS+=-D_USE_X11 -D_CLOCK_2400x1440
 hamclock-2400x1440: LIBS+=-lX11
-hamclock-2400x1440: $(OBJS) hclibs
+hamclock-2400x1440: superclean $(OBJS) hclibs
 	$(CXX) $(LDXXFLAGS) $(OBJS) -o $@ $(LIBS)
 
 
