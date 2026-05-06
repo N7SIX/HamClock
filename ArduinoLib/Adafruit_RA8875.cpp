@@ -346,7 +346,7 @@ bool Adafruit_RA8875::begin (int not_used)
             display,
             win,
             wm_state,
-            XA_ATOM,
+            4, // XA_ATOM is always 4 in X11
             32,
             PropModeReplace,
             (unsigned char *)&fullscreen,
