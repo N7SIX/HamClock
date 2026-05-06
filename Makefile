@@ -1,3 +1,9 @@
+# Superclean: remove all static libraries and object files for a fresh build
+superclean:
+	rm -f ArduinoLib/*.a wsServer/*.a zlib-hc/*.a
+	rm -f ArduinoLib/*.o wsServer/*.o zlib-hc/*.o *.o
+	rm -f hamclock-*
+	rm -f hamclock
 hamclock-1980x1080: CXXFLAGS+=-D_USE_X11 -D_CLOCK_1980x1080
 hamclock-1980x1080: LIBS+=-lX11
 hamclock-1980x1080: $(OBJS) hclibs
