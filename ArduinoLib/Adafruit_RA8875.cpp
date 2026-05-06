@@ -335,8 +335,23 @@ bool Adafruit_RA8875::begin (int not_used)
 	wa.bit_gravity = StaticGravity;
 	wa.background_pixel = black_pixel;
 	unsigned long value_mask = CWBitGravity | CWBackPixel;
+
         win = XCreateWindow(display, root, win_x, win_y, fb_si.xres, fb_si.yres, 0, visdepth, InputOutput,
-                visual, value_mask, &wa);
+            visual, value_mask, &wa);
+
+        // Force fullscreen using EWMH _NET_WM_STATE_FULLSCREEN
+        Atom wm_state = XInternAtom(display, "_NET_WM_STATE", False);
+        Atom fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", False);
+        XChangeProperty(
+            display,
+            win,
+            wm_state,
+            XA_ATOM,
+            32,
+            PropModeReplace,
+            (unsigned char *)&fullscreen,
+            1
+        );
 
 	// create a black GC for this visual
 	XGCValues gcv;

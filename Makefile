@@ -1,3 +1,7 @@
+hamclock-1980x1080: CXXFLAGS+=-D_USE_X11 -D_CLOCK_1980x1080
+hamclock-1980x1080: LIBS+=-lX11
+hamclock-1980x1080: $(OBJS) hclibs
+	$(CXX) $(LDXXFLAGS) $(OBJS) -o $@ $(LIBS)
 # Makefile for HamClock on linux or macos
 # type "make help" for possible targets
 
