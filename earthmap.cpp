@@ -1,4 +1,9 @@
+
 #include <sys/stat.h>
+#include "HamClock.h" // Ensure SBox and other types are defined
+
+// Forward declaration for fallback logic
+void drawEarthMap(const SBox &box);
 
 // Helper: check if file exists
 static bool fileExists(const char *filename) {
