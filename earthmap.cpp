@@ -4,8 +4,14 @@ void drawEarthMap(const SBox &box) {
 }
 
 
+
 #include "HamClock.h" // Ensure SBox and other types are defined
 #include <sys/stat.h>
+
+// Stub implementation for drawEarthMap to resolve linker error
+void drawEarthMap(const SBox &box) {
+    // TODO: Implement the original map drawing logic here
+}
 
 // Forward declaration for fallback logic
 void drawEarthMap(const SBox &box);
