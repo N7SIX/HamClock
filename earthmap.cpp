@@ -1,10 +1,3 @@
-// Stub implementation for drawEarthMap to resolve linker error
-void drawEarthMap(const SBox &box) {
-    // TODO: Implement the original map drawing logic here
-}
-
-
-
 #include "HamClock.h" // Ensure SBox and other types are defined
 #include <sys/stat.h>
 
@@ -12,9 +5,6 @@ void drawEarthMap(const SBox &box) {
 void drawEarthMap(const SBox &box) {
     // TODO: Implement the original map drawing logic here
 }
-
-// Forward declaration for fallback logic
-void drawEarthMap(const SBox &box);
 
 // Helper: check if file exists
 static bool fileExists(const char *filename) {
