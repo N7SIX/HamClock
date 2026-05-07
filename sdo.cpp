@@ -28,13 +28,13 @@ static const char *sdo_menu[SDOT_N] = {
 };
 
 static const char *sdo_url[SDOT_N] = {
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_211193171.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_HMIB.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_HMIIC.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_0131.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_0193.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_0211.mp4",
-    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_1024_0304.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_211193171.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_HMIB.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_HMIIC.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_0131.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_0193.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_0211.mp4",
+    "https://sdo.gsfc.nasa.gov/assets/img/latest/mpeg/latest_2048_0304.mp4",
 };
 
 static const char *sdo_file[SDOT_N] = {

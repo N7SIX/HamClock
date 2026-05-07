@@ -1,3 +1,33 @@
+#include <sys/stat.h>
+
+// Helper: check if file exists
+static bool fileExists(const char *filename) {
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
+}
+
+// Helper: draw PNG if available (stub, replace with your PNG drawing routine)
+static bool drawSatelliteMapIfAvailable(const SBox &box) {
+    const char *sat_map = "world_satellite.png";
+    if (fileExists(sat_map)) {
+        // TODO: Replace with your PNG drawing function, e.g., tft.drawPNG(sat_map, box.x, box.y, box.w, box.h);
+        // Example stub:
+        // if (tft.drawPNG(sat_map, box.x, box.y, box.w, box.h)) return true;
+        // For now, just indicate success if file exists (simulate drawing)
+        return true;
+    }
+    return false;
+}
+
+// Main map drawing entry point (call this instead of direct drawing)
+void drawEarthMapWithFallback(const SBox &box) {
+    if (!drawSatelliteMapIfAvailable(box)) {
+        // Fallback: call the original map drawing logic
+        drawEarthMap(box);
+    }
+}
+
+// To use: Replace calls to drawEarthMap(box) with drawEarthMapWithFallback(box) in your UI code.
 /* code to manage the earth map
  */
 
