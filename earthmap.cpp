@@ -1,3 +1,7 @@
+// Stub implementation for drawEarthMap to resolve linker error
+void drawEarthMap(const SBox &box) {
+    // TODO: Implement the original map drawing logic here
+}
 
 #include <sys/stat.h>
 #include "HamClock.h" // Ensure SBox and other types are defined
