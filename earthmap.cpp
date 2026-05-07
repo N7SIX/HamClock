@@ -3,8 +3,9 @@ void drawEarthMap(const SBox &box) {
     // TODO: Implement the original map drawing logic here
 }
 
-#include <sys/stat.h>
+
 #include "HamClock.h" // Ensure SBox and other types are defined
+#include <sys/stat.h>
 
 // Forward declaration for fallback logic
 void drawEarthMap(const SBox &box);
