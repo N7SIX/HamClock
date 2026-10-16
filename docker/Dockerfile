@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for HamClock (Open HamClock / OHB Edition)
+# Multi-stage Dockerfile for HamClock (N7SIX HamClock)
 # Pre-builds all web resolutions for instant resolution switching via environment variable
 
 # ------------------------------------------------------------------------------
@@ -66,3 +66,4 @@ EXPOSE 8080 8081 8082
 ENV RESOLUTION=800x480
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+

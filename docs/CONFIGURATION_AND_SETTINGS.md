@@ -1,4 +1,4 @@
-# ⚙️ HamClock Configuration & Settings Guide (v4.32)
+# ⚙️ HamClock Configuration & Settings Guide (v7.6.1)
 
 HamClock stores all station settings, callsign profiles, and peripheral configurations in `~/.hamclock/hamclock.nvram` (or specified via the `-d` command-line option).
 
@@ -14,9 +14,9 @@ You can access the Setup screens through any of these methods:
 
 ---
 
-## ⌨️ On-Screen Modal Virtual Keyboard (v4.32)
+## ⌨️ On-Screen Modal Virtual Keyboard (v7.6.1)
 
-HamClock v4.32 introduces a built-in touchscreen virtual keyboard. Whenever an input field (callsign, Wi-Fi SSID, password, DX cluster host, or coordinates) is selected on a touchscreen or web client:
+HamClock v7.6.1 introduces a built-in touchscreen virtual keyboard. Whenever an input field (callsign, Wi-Fi SSID, password, DX cluster host, or coordinates) is selected on a touchscreen or web client:
 - An on-screen QWERTY modal appears with Shift, Caps, Symbols, and Backspace keys.
 - Allows full station configuration directly from touch tablets and kiosks without a physical keyboard attached.
 
@@ -75,7 +75,7 @@ HamClock v4.32 introduces a built-in touchscreen virtual keyboard. Whenever an i
 
 ---
 
-## 📊 Configurable Panes in v4.32
+## 📊 Configurable Panes in v7.6.1
 
 HamClock features 4 configurable pane slots that can display any of the following live widgets:
 

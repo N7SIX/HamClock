@@ -1,6 +1,6 @@
 # 📱 HamClock for Android Installation Guide
 
-**9M2PJU HamClock (Open HamClock - OHB Edition)** can run on any **Android phone, tablet, or TV box (Android 5.0+)**. 
+**9M2PJU HamClock (N7SIX HamClock)** can run on any **Android phone, tablet, or TV box (Android 5.0+)**. 
 
 Repurposing an old or spare Android tablet makes one of the **cheapest, lowest-power (<3W), and most responsive dedicated HamClock touch dashboards** for your amateur radio shack!
 
@@ -217,3 +217,4 @@ curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/ma
 ```
 
 </div>
+

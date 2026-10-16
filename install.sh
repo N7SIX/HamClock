@@ -1,6 +1,6 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # ==============================================================================
-# N7SIX HamClock Installer (Open HamClock / OHB Edition)
+# N7SIX HamClock Installer (N7SIX HamClock)
 # Author: N7SIX (https://hamradio.my)
 # Contact / Support Email: 9m2pju@hamradio.my
 # Compatible with: Linux (Debian, Ubuntu, Raspberry Pi OS, Arch, Fedora),
@@ -24,7 +24,7 @@ echo -e " |  __  |/ _\` | '_ \` _ \\ |    | |/ _ \\ / __| |/ /"
 echo -e " | |  | | (_| | | | | | | |___| | (_) | (__|   < "
 echo -e " |_|  |_|\\__,_|_| |_| |_|\\____|_|\\___/ \\___|_|\\_\\"
 echo -e "${NC}"
-echo -e "${GREEN}          N7SIX Installer  -  OHB Edition          ${NC}"
+echo -e "${GREEN}          N7SIX Installer  -  N7SIX Edition          ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 OS="$(uname -s)"
@@ -343,3 +343,4 @@ echo -e "${CYAN}+--------------------------------------------------+${NC}"
 echo -e "You can start HamClock by running:\n  ${YELLOW}hamclock${NC}\n"
 echo -e "${BLUE}Found a problem? Please report it on GitHub:${NC}"
 echo -e "  ${CYAN}https://github.com/9M2PJU/9M2PJU-HamClock-Installer/issues${NC}\n"
+

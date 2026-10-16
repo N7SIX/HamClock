@@ -1,10 +1,10 @@
-﻿# 🪟 Windows Installation & User Guide
+# ?? Windows Installation & User Guide
 
-**N7SIX HamClock (Open HamClock - OHB Edition)** can be run effortlessly on Windows 10 and Windows 11 using several convenient options.
+**N7SIX HamClock (N7SIX HamClock)** can be run effortlessly on Windows 10 and Windows 11 using several convenient options.
 
 ---
 
-## 🖥️ Method 0: Native Windows Executable (No WSL/Docker required)
+## ??? Method 0: Native Windows Executable (No WSL/Docker required)
 
 HamClock can be cross-compiled to a native Windows `.exe` that runs the web-only backend without WSL, Docker, or any Linux subsystem. The executable serves the dashboard over HTTP/WebSocket; you view it in any browser.
 
@@ -64,7 +64,7 @@ All web dashboard features (clock display, maps, propagation, DX cluster, weathe
 
 ---
 
-## ⚡ Method 1: 1-Click Automated PowerShell Installer (Fastest)
+## ? Method 1: 1-Click Automated PowerShell Installer (Fastest)
 
 Open **PowerShell** (press `Win + X`, then click **Terminal** or **PowerShell**) and paste:
 
@@ -76,7 +76,7 @@ The script automatically checks your environment (Docker Desktop or WSL2), sets 
 
 ---
 
-## 🐧 Method 2: Native Windows Desktop App via WSL2 / WSLg (Recommended for GUI)
+## ?? Method 2: Native Windows Desktop App via WSL2 / WSLg (Recommended for GUI)
 
 On modern Windows 10 (Build 19044+) and Windows 11, **WSLg** provides seamless native graphical window rendering on your Windows desktop.
 
@@ -101,7 +101,7 @@ A floating native window appears seamlessly on your Windows desktop with high-DP
 
 ---
 
-## 🐳 Method 3: Docker Desktop for Windows
+## ?? Method 3: Docker Desktop for Windows
 
 If you use **Docker Desktop**, run the container with persistent configuration:
 
@@ -126,7 +126,7 @@ docker run -d `
 
 ---
 
-## 🚀 Starting HamClock Automatically on Windows Boot
+## ?? Starting HamClock Automatically on Windows Boot
 
 ### For Docker Desktop:
 Docker Desktop automatically restarts the container on boot when `--restart unless-stopped` is specified.
@@ -134,3 +134,4 @@ Docker Desktop automatically restarts the container on boot when `--restart unle
 ### For WSL2 Background Service:
 Create a shortcut in your Windows Startup folder (`Win + R` $\to$ `shell:startup`):
 - **Target**: `wsl.exe -d Ubuntu -e ~/.local/bin/hamclock -r 1600x960`
+

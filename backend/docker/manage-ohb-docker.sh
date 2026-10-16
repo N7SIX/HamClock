@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # at release time, this value is set to the tagged release
-OHB_MANAGER_VERSION=edge
+OHB_MANAGER_VERSION=v7.6.1.1
 # tags to use
 DEFAULT_VOACAP_SERVICE_TAG=1.20
 DEFAULT_PSKR_MQTT_CACHE_TAG=1.19

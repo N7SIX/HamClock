@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # ==============================================================================
 # 9M2PJU HamClock .deb Package Generator
 # Author: 9M2PJU (https://hamradio.my)
@@ -39,7 +39,7 @@ Replaces: esphamclock
 Maintainer: 9M2PJU <9m2pju@hamradio.my>
 Homepage: https://hamclock.hamradio.my
 Description: Portable space weather, propagation and telemetry dashboard for radio amateurs
- 9M2PJU HamClock (Open HamClock - OHB Edition) is a dashboard suite for
+ 9M2PJU HamClock (N7SIX HamClock) is a dashboard suite for
  amateur radio operators providing VOACAP propagation modeling, live SDO/NOAA space
  weather, satellite tracking, ADIF log broadcasting, and rotator/radio CAT control.
  Includes pre-built 800x480, 1600x960, 2400x1440, 3200x1920 and Web resolutions.
@@ -78,3 +78,4 @@ dpkg-deb --build --root-owner-group "$PKG_ROOT" "$OUT_DIR/$DEB_FILENAME"
 
 rm -rf "$PKG_ROOT"
 echo "Successfully created Debian package: $OUT_DIR/$DEB_FILENAME"
+

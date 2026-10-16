@@ -3,7 +3,7 @@ pkgname=hamclock-git
 _pkgname=hamclock
 pkgver=7.6.1.r0.g0000000
 pkgrel=1
-pkgdesc="Space weather, VOACAP propagation, satellite tracker and telemetry dashboard for radio amateurs (OHB Edition)"
+pkgdesc="Space weather, VOACAP propagation, satellite tracker and telemetry dashboard for radio amateurs (N7SIX Edition)"
 arch=('x86_64' 'aarch64' 'armv7h')
 url="https://hamclock.hamradio.my"
 license=('custom')
@@ -53,3 +53,4 @@ package() {
   install -m644 deploy/hamclock.1 "$pkgdir/usr/share/man/man1/"
   install -m644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
+

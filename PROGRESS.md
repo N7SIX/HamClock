@@ -3,12 +3,12 @@
 **Repository:** `https://github.com/9M2PJU/9M2PJU-HamClock-Installer`  
 **Maintainer:** 9M2PJU (`9m2pju@hamradio.my` | [HamRadio.my](https://hamradio.my))  
 **Backend:** N7SIX HamClock Backend (`n7six.hamclock.app:80`)  
-**Version:** `4.32`
+**Version:** `7.6.1`
 
 ---
 
 ## 1. Project Overview & Architecture
-This project is the definitive open-source installer, multi-platform packaging suite, and web deployment for **HamClock (v4.32)**, configured natively to connect with the **Open HamClock Backend (OHB)** without `/etc/hosts` workarounds.
+This project is the definitive open-source installer, multi-platform packaging suite, and web deployment for **HamClock (v7.6.1)**, configured natively to connect with the **N7SIX HamClock Backend** without `/etc/hosts` workarounds.
 
 ### Supported Platforms & Targets:
 - **1-Line Universal Installer (`install.sh`)**: Linux (Debian, Ubuntu, RPi OS, Arch, Fedora), macOS (Intel/Apple Silicon), and FreeBSD.

@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}====================================================${NC}"
 echo -e "${GREEN}      9M2PJU HamClock Docker Installer           ${NC}"
-echo -e "${GREEN}         (Open HamClock - OHB Edition)              ${NC}"
+echo -e "${GREEN}         (N7SIX HamClock)              ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 # Check for Docker
@@ -112,3 +112,4 @@ echo -e "\nTo switch resolution anytime:"
 echo -e "  ${CYAN}RESOLUTION=800x480 ./install-docker.sh${NC} (or 1600x960, 2400x1440, 3200x1920)"
 echo -e "To view logs:"
 echo -e "  ${CYAN}$DOCKER_CMD logs -f hamclock${NC}\n"
+

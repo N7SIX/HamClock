@@ -1,6 +1,8 @@
-# Open HamClock Backend (OHB) Release Process
+# N7SIX HamClock Backend Release Process
 
 This document describes how to build images locally for development/testing and how to trigger and monitor releases via GitHub Actions using the GitHub CLI (`gh`).
+
+The N7SIX HamClock Backend is versioned independently from the HamClock application. Backend releases use `v7.6.1.1`+ while HamClock application releases use `v7.6.1`+.
 
 ---
 
@@ -16,8 +18,8 @@ For local development and testing, you can build a local Docker image tagged wit
 cd docker && ./build-image.sh
 ```
 
-- When not on a Git tag, the script automatically falls back to the `edge` tag and builds `komacke/open-hamclock-backend:edge`.
-- **Maps Download**: The build script automatically downloads the pre-packaged offline maps archive (`ohb-maps.tar.zst`) from GitHub Releases if it is not already present locally.
+- When not on a Git tag, the script automatically falls back to the `edge` tag and builds `n7six/n7six-hamclock-backend:edge`.
+- **Maps Download**: The build script automatically downloads the pre-packaged offline maps archive (`n7six-maps.tar.zst`) from GitHub Releases if it is not already present locally.
 - **Options & Environment Variables**:
   - `-n`: Build with `--no-cache`.
   - `-m`: Multi-platform build (`linux/amd64`, `linux/arm64`) using Buildx and pushes to Docker Hub.
@@ -28,8 +30,8 @@ cd docker && ./build-image.sh
 
 ## 2. Tag Naming Convention
 
-This repository uses Semantic Versioning with a `v` prefix (e.g., `v2.0.15`, `v2.1.0`).
-- **Always include the `v` prefix** (use `v2.0.15`, not `2.0.15`).
+This repository uses Semantic Versioning with a `v` prefix (e.g., `v7.6.1.1`, `v7.6.2`).
+- **Always include the `v` prefix** (use `v7.6.1.1`, not `7.6.1.1`).
 - The build script checks for tags matching `^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$` and automatically tags them with `:latest` on Docker Hub in addition to the version tag.
 
 ---
@@ -40,10 +42,10 @@ When a release is created by the GitHub Actions workflow, the following assets a
 
 | Asset | Description |
 |---|---|
-| `manage-ohb-docker-vX.Y.Z.sh` | Installer and container manager script with `OHB_MANAGER_VERSION` stamped to this release. |
-| `verify_firmware_integrity-vX.Y.Z.pl` | Perl firmware verification utility with `$VERSION` stamped. |
-| `OHB-vX.Y.Z.tar.gz` | Clean source code tarball generated via `git archive`. |
-| `OHB-vX.Y.Z.zip` | Clean source code zip archive generated via `git archive`. |
+| `manage-n7six-docker-v7.6.1.1.sh` | Installer and container manager script with `N7SIX_MANAGER_VERSION` stamped to this release. |
+| `verify_firmware_integrity-v7.6.1.1.pl` | Perl firmware verification utility with `$VERSION` stamped. |
+| `N7SIX-v7.6.1.1.tar.gz` | Clean source code tarball generated via `git archive`. |
+| `N7SIX-v7.6.1.1.zip` | Clean source code zip archive generated via `git archive`. |
 | `CHECKSUMS` | SHA-256 checksums of all release assets. |
 
 ---
@@ -63,17 +65,17 @@ gh auth status
 Trigger the release workflow manually using `workflow_dispatch`:
 
 ```bash
-# Trigger release build for version v2.0.16 (builds Docker and publishes release by default):
-gh workflow run release.yml -f tag_name=v2.0.16
+# Trigger release build for version v7.6.1.1 (builds Docker and publishes release by default):
+gh workflow run release.yml -f tag_name=v7.6.1.1
 
 # Optional: create as a draft release:
-gh workflow run release.yml -f tag_name=v2.0.16 -f publish_release=false
+gh workflow run release.yml -f tag_name=v7.6.1.1 -f publish_release=false
 
 # Optional: skip Docker Hub image build/push:
-gh workflow run release.yml -f tag_name=v2.0.16 -f build_docker=false
+gh workflow run release.yml -f tag_name=v7.6.1.1 -f build_docker=false
 
 # Optional: draft release without Docker build:
-gh workflow run release.yml -f tag_name=v2.0.16 -f publish_release=false -f build_docker=false
+gh workflow run release.yml -f tag_name=v7.6.1.1 -f publish_release=false -f build_docker=false
 
 # Interactive mode (prompts for inputs):
 gh workflow run
@@ -83,15 +85,15 @@ gh workflow run
 
 | Input | Type | Default | Description |
 |---|---|---|---|
-| `tag_name` | string | `v0.0.0` | Version tag to release (e.g., `v2.0.16`). |
+| `tag_name` | string | `v0.0.0` | Version tag to release (e.g., `v7.6.1.1`). |
 | `publish_release` | choice (`true`, `false`) | `true` | When `true`, publishes the release immediately. Set to `false` to create as a draft. |
 | `build_docker` | choice (`true`, `false`) | `true` | When `true`, builds and pushes the multi-platform Docker image. |
 
 Alternatively, pushing a signed git tag matching `v*` will trigger the workflow automatically:
 
 ```bash
-git tag -s v2.0.16 -m "Release v2.0.16"
-git push origin v2.0.16
+git tag -s v7.6.1.1 -m "Release v7.6.1.1"
+git push origin v7.6.1.1
 ```
 
 ---
@@ -125,7 +127,7 @@ The Docker build job requires the following GitHub repository secrets:
 
 | Secret Name | Description |
 |---|---|
-| `DOCKERHUB_USERNAME` | Docker Hub username (e.g., `komacke`) |
+| `DOCKERHUB_USERNAME` | Docker Hub username (e.g., `n7six`) |
 | `DOCKERHUB_TOKEN` | Docker Hub Personal Access Token (PAT) with write permissions |
 
 ---
@@ -151,11 +153,13 @@ Once added as a signing key, GitHub will mark your releases, tags, and commits w
 
 ## 8. License
 
-Copyright (C) 2026 Open HamClock Backend (OHB) Contributors
+Copyright (C) 2026 N7SIX HamClock Backend Contributors
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU Affero General Public License](LICENSE) for more details.
 
 You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
 

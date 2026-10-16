@@ -1,10 +1,10 @@
-﻿# 📦 Canonical Snap Package Guide
+# ?? Canonical Snap Package Guide
 
-**N7SIX HamClock (Open HamClock - OHB Edition)** can be published and installed directly from Canonical's **Snap Store** across Ubuntu, Debian, Fedora, Arch Linux, openSUSE, and Manjaro.
+**N7SIX HamClock (N7SIX HamClock)** can be published and installed directly from Canonical's **Snap Store** across Ubuntu, Debian, Fedora, Arch Linux, openSUSE, and Manjaro.
 
 ---
 
-## ⚡ User Installation
+## ? User Installation
 
 The snap is published on the `stable` channel:
 
@@ -21,7 +21,7 @@ hamclock -r 1600x960
 
 ---
 
-## 🛠️ Maintainer Guide: Registering & Publishing to Snap Store
+## ??? Maintainer Guide: Registering & Publishing to Snap Store
 
 To publish `hamclock` under your Canonical developer account (**9M2PJU**):
 
@@ -44,4 +44,5 @@ snapcraft export-login --snaps=hamclock --channels=edge,beta,candidate,stable sn
 3. Name: `SNAPCRAFT_STORE_CREDENTIALS`
 4. Value: Paste the contents of `snapcraft.token`.
 
-Every new release tag (e.g. `v4.32`) pushed to GitHub will automatically compile multi-architecture snaps (`amd64`, `arm64`, `armhf`) and release them to the Snap Store `stable` channel!
+Every new release tag (e.g. `v7.6.1`) pushed to GitHub will automatically compile multi-architecture snaps (`amd64`, `arm64`, `armhf`) and release them to the Snap Store `stable` channel!
+

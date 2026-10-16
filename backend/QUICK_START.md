@@ -19,7 +19,7 @@ Run the install command:
 ```bash
 ./manage-ohb-docker.sh install
 ```
-*(To install a specific version, pass `-t <version>`, e.g., `./manage-ohb-docker.sh install -t v2.0.15`)*.
+*(To install a specific version, pass `-t <version>`, e.g., `./manage-ohb-docker.sh install -t v7.6.1.1`)*.
 
 ### Upgrading OHB
 

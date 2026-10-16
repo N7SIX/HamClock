@@ -1,4 +1,4 @@
-# 💡 HamClock Usage Guide, Tips & Shortcuts (v4.32)
+# 💡 HamClock Usage Guide, Tips & Shortcuts (v7.6.1)
 
 Learn how to get the most out of your **HamClock** dashboard in the shack.
 

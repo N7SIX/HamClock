@@ -1,4 +1,4 @@
-9M2PJU HamClock Installer (Open HamClock / OHB Edition)
+9M2PJU HamClock Installer (N7SIX HamClock)
 Backend: https://n7six.hamclock.app
 
 HamClock is a kiosk-style application that provides real time space weather, radio propagation models,
@@ -18,3 +18,4 @@ Executive summary for ESP8266:
     open ESPHamClock.ino in IDE
     Sketch -> Compile
     Sketch -> Upload
+

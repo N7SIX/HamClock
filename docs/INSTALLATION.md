@@ -1,6 +1,6 @@
 # 🚀 HamClock Installation Guide
 
-Comprehensive installation instructions for **HamClock (Open HamClock / OHB Edition)** across all supported operating systems and hardware platforms.
+Comprehensive installation instructions for **N7SIX HamClock** across all supported operating systems and hardware platforms.
 
 ---
 
@@ -105,24 +105,24 @@ paru -S hamclock-git
 Supports `amd64`, `arm64` (RPi 4/5), and `armhf` (RPi 2/3, 32-bit):
 ```bash
 # Download and install
-sudo dpkg -i hamclock_4.32-1_amd64.deb    # or _arm64.deb / _armhf.deb
+sudo dpkg -i hamclock_7.6.1-1_amd64.deb    # or _arm64.deb / _armhf.deb
 sudo apt-get install -f                   # resolve dependencies
 ```
 
 ### 🎩 Fedora / RHEL / openSUSE (`.rpm`)
 Supports `x86_64`, `aarch64`, and `armhfp`:
 ```bash
-sudo rpm -Uvh hamclock-4.32-1.x86_64.rpm  # or .aarch64.rpm
+sudo rpm -Uvh hamclock-7.6.1-1.x86_64.rpm  # or .aarch64.rpm
 ```
 
 ### 🚀 Universal AppImage (Runs on ANY Linux distro without installation)
 Supports `x86_64`, `aarch64`, and `armhf`:
 ```bash
-chmod +x HamClock-4.32-x86_64.AppImage
-./HamClock-4.32-x86_64.AppImage
+chmod +x HamClock-7.6.1-x86_64.AppImage
+./HamClock-7.6.1-x86_64.AppImage
 
 # Launch with specific resolution
-./HamClock-4.32-x86_64.AppImage -r 1600x960
+./HamClock-7.6.1-x86_64.AppImage -r 1600x960
 ```
 
 ---
@@ -133,10 +133,10 @@ See the full [Windows Installation Guide](WINDOWS.md) for complete instructions.
 
 ### Option A: Pre-Compiled Standalone Windows Executable (.exe) [No WSL/Docker Needed]
 Download the standalone executable directly from [GitHub Releases](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/releases/latest):
-- `HamClock-4.32-windows-800x480.exe`
-- `HamClock-4.32-windows-1600x960.exe`
-- `HamClock-4.32-windows-2400x1440.exe`
-- `HamClock-4.32-windows-3200x1920.exe`
+- `HamClock-7.6.1-windows-800x480.exe`
+- `HamClock-7.6.1-windows-1600x960.exe`
+- `HamClock-7.6.1-windows-2400x1440.exe`
+- `HamClock-7.6.1-windows-3200x1920.exe`
 
 Run the executable and open `http://localhost:8081/live.html` in your web browser.
 
@@ -270,16 +270,16 @@ Download the latest binaries from [GitHub Releases](https://github.com/9M2PJU/9M
 
 - **Ubuntu / Debian / Raspberry Pi OS (`.deb`)**:
   ```bash
-  sudo dpkg -i hamclock_4.32-1_amd64.deb   # (or arm64 / armhf)
+  sudo dpkg -i hamclock_7.6.1-1_amd64.deb   # (or arm64 / armhf)
   ```
 - **Fedora / RHEL / openSUSE (`.rpm`)**:
   ```bash
-  sudo rpm -Uvh hamclock-4.32-1.x86_64.rpm  # (or aarch64 / armhfp)
+  sudo rpm -Uvh hamclock-7.6.1-1.x86_64.rpm  # (or aarch64 / armhfp)
   ```
 - **Universal Linux (`.AppImage`)**:
   ```bash
-  chmod +x HamClock-4.32-x86_64.AppImage
-  ./HamClock-4.32-x86_64.AppImage
+  chmod +x HamClock-7.6.1-x86_64.AppImage
+  ./HamClock-7.6.1-x86_64.AppImage
   ```
 
 ---
@@ -461,3 +461,4 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now hamclock
 sudo systemctl status hamclock
 ```
+

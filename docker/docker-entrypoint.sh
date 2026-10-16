@@ -26,7 +26,7 @@ case "$RES" in
 esac
 
 echo "===================================================="
-echo " Starting HamClock (Open HamClock - OHB Edition)"
+echo " Starting HamClock (N7SIX HamClock)"
 echo " Binary:     $BIN"
 echo " Resolution: $RES"
 echo " Backend:    n7six.hamclock.app:80"
@@ -46,3 +46,4 @@ fi
 
 # Default execution with any extra flags passed via EXTRA_ARGS
 exec "$BIN" ${EXTRA_ARGS:--k}
+

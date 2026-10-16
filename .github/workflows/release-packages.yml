@@ -1,4 +1,4 @@
-﻿name: Build & Release Packages (.deb, .rpm, .appimage, .exe)
+name: Build & Release Packages (.deb, .rpm, .appimage, .exe)
 
 on:
   push:
@@ -164,13 +164,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
-          name: "N7SIX HamClock ${{ steps.vars.outputs.tag }} (OHB Edition)"
+          name: "N7SIX HamClock ${{ steps.vars.outputs.tag }} (N7SIX Edition)"
           body: |
-            ## N7SIX HamClock (Open HamClock - OHB Edition) ${{ steps.vars.outputs.tag }}
+            ## N7SIX HamClock (N7SIX HamClock) ${{ steps.vars.outputs.tag }}
             
-            ### 📦 Download Pre-Built Installers
+            ### ?? Download Pre-Built Installers
             
-            #### 🐧 Debian / Ubuntu / Raspberry Pi OS (`.deb`)
+            #### ?? Debian / Ubuntu / Raspberry Pi OS (`.deb`)
             - **64-bit x86 (amd64)**: `hamclock_${{ steps.vars.outputs.ver }}-1_amd64.deb`
             - **64-bit ARM (arm64 / RPi 4/5)**: `hamclock_${{ steps.vars.outputs.ver }}-1_arm64.deb`
             - **32-bit ARM (armhf / RPi 2/3 / Raspbian)**: `hamclock_${{ steps.vars.outputs.ver }}-1_armhf.deb`
@@ -181,7 +181,7 @@ jobs:
             sudo apt-get install -f # resolve any dependencies
             ```
             
-            #### 🎩 Fedora / RHEL / openSUSE (`.rpm`)
+            #### ?? Fedora / RHEL / openSUSE (`.rpm`)
             - **x86_64**: `hamclock-${{ steps.vars.outputs.ver }}-1.x86_64.rpm`
             - **aarch64 (ARM64)**: `hamclock-${{ steps.vars.outputs.ver }}-1.aarch64.rpm`
             - **armhfp (ARM 32-bit)**: `hamclock-${{ steps.vars.outputs.ver }}-1.armhfp.rpm`
@@ -191,7 +191,7 @@ jobs:
             sudo rpm -Uvh hamclock-${{ steps.vars.outputs.ver }}-1.*.rpm
             ```
             
-            #### 🚀 Universal AppImage (Portable Executable)
+            #### ?? Universal AppImage (Portable Executable)
             - **x86_64**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
             - **aarch64**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
             - **armhf**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
@@ -202,7 +202,7 @@ jobs:
             ./n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage
             ```
             
-            #### 🪟 Native Windows Executable (`.exe`)
+            #### ?? Native Windows Executable (`.exe`)
             - **800x480**: `HamClock-${{ steps.vars.outputs.ver }}-windows-800x480.exe`
             - **1600x960**: `HamClock-${{ steps.vars.outputs.ver }}-windows-1600x960.exe`
             - **2400x1440**: `HamClock-${{ steps.vars.outputs.ver }}-windows-2400x1440.exe`
@@ -217,7 +217,7 @@ jobs:
             
             Then open `http://localhost:8081/live.html` in any browser.
             
-            #### 🐳 Multi-Arch Docker
+            #### ?? Multi-Arch Docker
             ```bash
             docker pull ghcr.io/9m2pju/9m2pju-hamclock-docker:latest
             ```
@@ -228,3 +228,4 @@ jobs:
             release-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

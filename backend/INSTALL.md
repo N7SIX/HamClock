@@ -50,7 +50,7 @@ Run the installation:
 
 To install a specific version tag instead of `edge` or latest, pass the `-t` option:
 ```bash
-./manage-ohb-docker.sh install -t v2.0.15
+./manage-ohb-docker.sh install -t v7.6.1.1
 ```
 
 When installation completes, OHB will be running. Verify the endpoint:
