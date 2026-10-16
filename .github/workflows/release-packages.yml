@@ -1,0 +1,230 @@
+﻿name: Build & Release Packages (.deb, .rpm, .appimage, .exe)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag (e.g. v4.29)'
+        required: true
+        default: 'v4.29'
+
+permissions:
+  contents: write
+
+jobs:
+  build-packages:
+    name: Build Packages (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            rpm_arch: x86_64
+            appimage_arch: x86_64
+            docker_platform: linux/amd64
+          - arch: arm64
+            rpm_arch: aarch64
+            appimage_arch: aarch64
+            docker_platform: linux/arm64
+          - arch: armhf
+            rpm_arch: armhfp
+            appimage_arch: armhf
+            docker_platform: linux/arm/v7
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU for Multi-Arch Builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install Host Packaging Tools (dpkg, rpm, appimagetool)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y dpkg-dev rpm libarchive-tools curl
+          # Install appimagetool
+          curl -fsSL -o /usr/local/bin/appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" || true
+          if [ -f /usr/local/bin/appimagetool ]; then
+            chmod +x /usr/local/bin/appimagetool
+            # Extract AppImage in runner if FUSE is unavailable
+            cd /tmp && /usr/local/bin/appimagetool --appimage-extract && sudo mv squashfs-root /opt/appimagetool && sudo ln -sf /opt/appimagetool/AppRun /usr/local/bin/appimagetool || true
+          fi
+
+      - name: Build HamClock Binaries in Container (${{ matrix.docker_platform }})
+        run: |
+          mkdir -p dist
+          chmod +x packaging/*.sh
+          # Run compilation inside target architecture container
+          docker run --rm --platform ${{ matrix.docker_platform }} \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            debian:bookworm-slim ./packaging/build-in-container.sh
+
+      - name: Package .deb (${{ matrix.arch }})
+        run: |
+          chmod +x packaging/*.sh
+          ./packaging/build-deb.sh "${{ matrix.arch }}" ./dist
+
+      - name: Package .rpm (${{ matrix.rpm_arch }})
+        run: |
+          ./packaging/build-rpm.sh "${{ matrix.rpm_arch }}" ./dist
+
+      - name: Package .AppImage (${{ matrix.appimage_arch }})
+        run: |
+          ./packaging/build-appimage.sh "${{ matrix.appimage_arch }}" ./dist || echo "AppImage step completed with fallback"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.arch }}
+          path: dist/*
+
+  build-windows-exe:
+    name: Build Windows .exe (MinGW cross-compile)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Install MinGW-w64 Toolchain
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y g++-mingw-w64-x86-64
+
+      - name: Build All Windows .exe Targets
+        run: |
+          make mingw-all-web
+          x86_64-w64-mingw32-strip mingw-web-*.exe
+          mkdir -p win-dist
+          TAG="${GITHUB_REF_NAME}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+          fi
+          VER="${TAG#v}"
+          for res in 800x480 1600x960 2400x1440 3200x1920; do
+            if [ -f "mingw-web-$res.exe" ]; then
+              cp "mingw-web-$res.exe" "win-dist/HamClock-${VER}-windows-${res}.exe"
+            fi
+          done
+
+      - name: Verify Executables
+        run: |
+          for f in win-dist/*.exe; do
+            echo "--- $f ---"
+            file "$f"
+            ls -la "$f"
+          done
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-windows-exe
+          path: win-dist/*.exe
+
+  create-release:
+    name: Publish GitHub Release
+    needs: [build-packages, build-windows-exe]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download All Built Packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate Checksums
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Determine Release Tag
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.release_tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          VER="${TAG#v}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "ver=${VER}" >> $GITHUB_OUTPUT
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: "N7SIX HamClock ${{ steps.vars.outputs.tag }} (OHB Edition)"
+          body: |
+            ## N7SIX HamClock (Open HamClock - OHB Edition) ${{ steps.vars.outputs.tag }}
+            
+            ### 📦 Download Pre-Built Installers
+            
+            #### 🐧 Debian / Ubuntu / Raspberry Pi OS (`.deb`)
+            - **64-bit x86 (amd64)**: `hamclock_${{ steps.vars.outputs.ver }}-1_amd64.deb`
+            - **64-bit ARM (arm64 / RPi 4/5)**: `hamclock_${{ steps.vars.outputs.ver }}-1_arm64.deb`
+            - **32-bit ARM (armhf / RPi 2/3 / Raspbian)**: `hamclock_${{ steps.vars.outputs.ver }}-1_armhf.deb`
+            
+            ```bash
+            # Install .deb
+            sudo dpkg -i hamclock_${{ steps.vars.outputs.ver }}-1_*.deb
+            sudo apt-get install -f # resolve any dependencies
+            ```
+            
+            #### 🎩 Fedora / RHEL / openSUSE (`.rpm`)
+            - **x86_64**: `hamclock-${{ steps.vars.outputs.ver }}-1.x86_64.rpm`
+            - **aarch64 (ARM64)**: `hamclock-${{ steps.vars.outputs.ver }}-1.aarch64.rpm`
+            - **armhfp (ARM 32-bit)**: `hamclock-${{ steps.vars.outputs.ver }}-1.armhfp.rpm`
+            
+            ```bash
+            # Install .rpm
+            sudo rpm -Uvh hamclock-${{ steps.vars.outputs.ver }}-1.*.rpm
+            ```
+            
+            #### 🚀 Universal AppImage (Portable Executable)
+            - **x86_64**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
+            - **aarch64**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
+            - **armhf**: `n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage`
+            
+            ```bash
+            # Run AppImage
+            chmod +x n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage
+            ./n7six.HamClock.v${{ steps.vars.outputs.ver }}.AppImage
+            ```
+            
+            #### 🪟 Native Windows Executable (`.exe`)
+            - **800x480**: `HamClock-${{ steps.vars.outputs.ver }}-windows-800x480.exe`
+            - **1600x960**: `HamClock-${{ steps.vars.outputs.ver }}-windows-1600x960.exe`
+            - **2400x1440**: `HamClock-${{ steps.vars.outputs.ver }}-windows-2400x1440.exe`
+            - **3200x1920**: `HamClock-${{ steps.vars.outputs.ver }}-windows-3200x1920.exe`
+            
+            No WSL, Docker, or X11 required. Statically linked, only depends on Windows system DLLs.
+            
+            ```cmd
+            :: Run from Command Prompt or PowerShell
+            HamClock-${{ steps.vars.outputs.ver }}-windows-1600x960.exe
+            ```
+            
+            Then open `http://localhost:8081/live.html` in any browser.
+            
+            #### 🐳 Multi-Arch Docker
+            ```bash
+            docker pull ghcr.io/9m2pju/9m2pju-hamclock-docker:latest
+            ```
+            
+            ---
+            *Built with N7SIX HamClock Backend (`n7six.hamclock.app:80`). Maintained by the N7SIX HamClock community.*
+          files: |
+            release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,905 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary Meta Tags & SEO -->
+  <title>N7SIX HamClock Installer | Open HamClock (OHB Edition) - Space Weather & Amateur Radio Dashboard</title>
+  <meta name="title" content="N7SIX HamClock Installer | Open HamClock (OHB Edition)">
+  <meta name="description" content="The definitive open-source installer and telemetry suite for HamClock (v7.6.1) with Open HamClock Backend (OHB), multi-architecture Docker images, native Linux/RPi/macOS one-liners, VOACAP propagation modeling, and Rotator/CAT Radio control.">
+  <meta name="keywords" content="HamClock, ESPHamClock, Open HamClock, OHB, 9M2PJU, amateur radio, ham radio, space weather, solar flux, VOACAP, radio propagation, rotctld, rigctld, flrig, raspberry pi hamclock, docker hamclock, sat tracking, ADIF broadcast">
+  <meta name="author" content="9M2PJU">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <link rel="canonical" href="https://hamclock.hamradio.my/">
+
+  <!-- Mobile & PWA Theme -->
+  <meta name="theme-color" content="#0B0F17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HamClock">
+
+  <!-- Open Graph / Facebook / Discord / Telegram -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://hamclock.hamradio.my/">
+  <meta property="og:title" content="N7SIX HamClock Installer | Open HamClock (OHB Edition)">
+  <meta property="og:description" content="One-line install for HamClock v7.6.1 with Open HamClock Backend (OHB), multi-architecture Docker, VOACAP propagation, satellite orbits, rig CAT, and rotator automation.">
+  <meta property="og:image" content="https://hamclock.hamradio.my/images/9m2pju-hamclock-ohb.png">
+  <meta property="og:image:secure_url" content="https://hamclock.hamradio.my/images/9m2pju-hamclock-ohb.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="960">
+  <meta property="og:image:alt" content="9M2PJU HamClock Space Weather & Telemetry Dashboard with Open HamClock Backend">
+  <meta property="og:site_name" content="HamRadio.my">
+  <meta property="og:locale" content="en_US">
+
+  <!-- Twitter / Card Preview -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://hamclock.hamradio.my/">
+  <meta name="twitter:title" content="N7SIX HamClock Installer | Open HamClock (OHB Edition)">
+  <meta name="twitter:description" content="One-line install for HamClock v7.6.1 with Open HamClock Backend (OHB), multi-architecture Docker, VOACAP propagation, satellite orbits, rig CAT, and rotator automation.">
+  <meta name="twitter:image" content="https://hamclock.hamradio.my/images/9m2pju-hamclock-ohb.png">
+  <meta name="twitter:image:alt" content="9M2PJU HamClock Space Weather & Telemetry Dashboard">
+  
+  <!-- Schema.org JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "N7SIX HamClock (OHB Edition)",
+        "operatingSystem": "Android, Linux, Raspberry Pi OS, macOS, FreeBSD, Windows, Docker",
+        "applicationCategory": "UtilitiesApplication",
+        "applicationSubCategory": "Amateur Radio Space Weather & Propagation Dashboard",
+        "softwareVersion": "7.6.1",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Open-source space weather, radio propagation, VOACAP modeling, satellite tracking, and telemetry dashboard for amateur radio operators worldwide with Open HamClock Backend (OHB).",
+        "url": "https://hamclock.hamradio.my/",
+        "downloadUrl": "https://github.com/9M2PJU/9M2PJU-HamClock-Installer",
+        "screenshot": "https://hamclock.hamradio.my/images/9m2pju-hamclock-ohb.png",
+        "author": {
+          "@type": "Person",
+          "name": "9M2PJU",
+          "url": "https://hamradio.my"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "HamRadio.my",
+          "url": "https://hamradio.my"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "name": "N7SIX HamClock Installer",
+        "url": "https://hamclock.hamradio.my/",
+        "description": "The definitive installer and dashboard suite for HamClock with Open HamClock Backend (OHB).",
+        "inLanguage": "en-US",
+        "publisher": {
+          "@type": "Organization",
+          "name": "HamRadio.my",
+          "url": "https://hamradio.my"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="images/9m2pju-hamclock-ohb.png">
+
+  <style>
+    :root {
+      --bg-main: #0B0F17;
+      --bg-card: #111827;
+      --bg-card-hover: #162032;
+      --bg-input: #080C14;
+      --border-color: #1F2937;
+      --border-highlight: #374151;
+      --text-main: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --text-dim: #6B7280;
+      
+      --accent-emerald: #10B981;
+      --accent-emerald-dim: rgba(16, 185, 129, 0.15);
+      --accent-amber: #F59E0B;
+      --accent-amber-dim: rgba(245, 158, 11, 0.15);
+      --accent-blue: #3B82F6;
+      --accent-blue-dim: rgba(59, 130, 246, 0.15);
+      --accent-cyan: #06B6D4;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      
+      --shadow-card: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    a:hover {
+      color: var(--text-main);
+    }
+
+    /* Container */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header & Navigation */
+    header {
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text-main);
+    }
+    .brand-badge {
+      background: var(--accent-emerald-dim);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+      align-items: center;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+    .btn-github {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .btn-github:hover {
+      border-color: var(--accent-blue);
+      background: var(--bg-card-hover);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+      position: relative;
+    }
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-ohb {
+      background: var(--accent-emerald-dim);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .badge-v429 {
+      background: var(--accent-blue-dim);
+      color: var(--accent-blue);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    .badge-docker {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 18px;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg, #10B981 0%, #3B82F6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto 36px;
+    }
+
+    /* Quick Install Box */
+    .install-box {
+      max-width: 860px;
+      margin: 0 auto 40px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+    .install-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px 6px 12px;
+      border-bottom: 1px solid var(--border-color);
+      justify-content: center;
+    }
+    .install-tab {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .install-tab:hover {
+      color: var(--text-main);
+      background: var(--bg-card-hover);
+    }
+    .install-tab.active {
+      background: var(--bg-main);
+      color: var(--accent-emerald);
+      border: 1px solid var(--border-highlight);
+    }
+    .command-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--bg-input);
+      border-radius: var(--radius-md);
+      margin-top: 10px;
+      gap: 12px;
+      overflow: hidden;
+    }
+    .command-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.90rem;
+      color: var(--accent-cyan);
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-wrap: anywhere;
+      text-align: left;
+      line-height: 1.5;
+      flex: 1;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .command-hint {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: rgba(17, 24, 39, 0.6);
+      border-radius: var(--radius-sm);
+      border-left: 3px solid var(--accent-emerald);
+      text-align: left;
+      line-height: 1.45;
+    }
+    .btn-copy {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+    .btn-copy:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-emerald);
+      color: var(--accent-emerald);
+    }
+
+    /* Showcase Image */
+    .screenshot-wrap {
+      max-width: 1000px;
+      margin: 0 auto 70px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+      background: var(--bg-card);
+    }
+    .screenshot-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Grid Sections */
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .section-desc {
+      text-align: center;
+      color: var(--text-muted);
+      max-width: 650px;
+      margin: 0 auto 48px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: var(--transition);
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-highlight);
+      background: var(--bg-card-hover);
+    }
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    .feature-card h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-main);
+    }
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    /* Tribute Memorial Card */
+    .tribute-card {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(17, 24, 39, 0.9) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      margin-bottom: 80px;
+      position: relative;
+    }
+    .tribute-badge {
+      display: inline-block;
+      background: var(--accent-amber-dim);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .tribute-card h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+    .tribute-card p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .tribute-quote {
+      font-family: 'JetBrains Mono', monospace;
+      font-style: italic;
+      color: var(--accent-amber);
+      background: var(--bg-input);
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border-left: 3px solid var(--accent-amber);
+    }
+
+    /* Resolution Showcase */
+    .res-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 80px;
+    }
+    .res-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+    }
+    .res-card h4 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+    .res-card .res-dim {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .res-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 50px 0 30px;
+      text-align: center;
+      background: var(--bg-input);
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      list-style: none;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .footer-copy {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-wrap {
+        height: 60px;
+      }
+      .nav-links {
+        display: none;
+      }
+      .hero {
+        padding: 45px 0 35px;
+      }
+      .hero h1 {
+        font-size: 2.1rem;
+      }
+      .hero p {
+        font-size: 0.95rem;
+        margin-bottom: 24px;
+      }
+      .install-box {
+        padding: 8px;
+        margin-bottom: 30px;
+      }
+      .install-tabs {
+        gap: 4px;
+        padding: 4px 2px 10px;
+      }
+      .install-tab {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+      }
+      .command-display {
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+        padding: 12px 14px;
+      }
+      .command-text {
+        font-size: 0.82rem;
+      }
+      .btn-copy {
+        width: 100%;
+        justify-content: center;
+      }
+      .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .footer-links {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header>
+    <div class="container nav-wrap">
+      <div class="brand">
+        <span>⏰ HamClock</span>
+        <span class="brand-badge">OHB v7.6.1</span>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#install">Install</a></li>
+        <li><a href="#android-showcase">Android App</a></li>
+        <li><a href="#docker">Docker</a></li>
+        <li><a href="#hardware">Hardware (CAT & Rotator)</a></li>
+        <li><a href="#sponsor">💖 Sponsor</a></li>
+        <li><a href="#tribute">Tribute</a></li>
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer" target="_blank" class="btn-github">GitHub Repo ⭐</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badges">
+        <span class="badge badge-ohb">🌐 Open HamClock Backend (OHB)</span>
+        <span class="badge badge-v761">⚡ Version 7.6.1 Ready</span>
+        <span class="badge" style="background: rgba(61, 220, 132, 0.15); color: #3DDC84; border: 1px solid rgba(61, 220, 132, 0.4);">📱 Native Android App (.apk)</span>
+      </div>
+
+      <h1>9M2PJU <span>HamClock</span> Installer</h1>
+      <p>The premier open-source space weather, radio propagation, VOACAP modeling, satellite tracking, and telemetry dashboard for amateur radio operators worldwide.</p>
+
+      <!-- 1-Line Quick Install Box -->
+      <div class="install-box" id="install">
+        <div class="install-tabs">
+          <button class="install-tab active" onclick="setTab('native')">🚀 1-Line</button>
+          <button class="install-tab" onclick="setTab('apk')">📱 Android App (.apk)</button>
+          <button class="install-tab" onclick="setTab('android')">📱 Android (Termux)</button>
+          <button class="install-tab" onclick="setTab('windows')">🪟 Windows</button>
+          <button class="install-tab" onclick="setTab('winnative')">🖥️ Windows .exe</button>
+          <button class="install-tab" onclick="setTab('docker')">🐳 Docker</button>
+          <button class="install-tab" onclick="setTab('aur')">🏹 Arch (AUR)</button>
+          <button class="install-tab" onclick="setTab('snap')">📦 Snap</button>
+          <button class="install-tab" onclick="setTab('deb')">🐧 .deb (Ubuntu/Pi)</button>
+          <button class="install-tab" onclick="setTab('rpm')">🎩 .rpm (Fedora)</button>
+          <button class="install-tab" onclick="setTab('appimage')">📦 AppImage</button>
+        </div>
+
+        <div class="command-display">
+          <div class="command-text" id="cmd-display">curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install.sh | bash</div>
+          <button class="btn-copy" onclick="copyCommand()">
+            <span id="copy-text">📋 Copy</span>
+          </button>
+        </div>
+        <div class="command-hint" id="cmd-hint">
+          🚀 <strong>Universal Installer:</strong> Auto-detects Linux (Debian, Ubuntu, Raspberry Pi OS, Arch, Fedora), macOS (Apple Silicon & Intel), and FreeBSD. Interactive prompts for resolution target and auto-start on login.
+        </div>
+      </div>
+
+      <!-- Screenshot Showcase -->
+      <div class="screenshot-wrap">
+        <img src="images/9m2pju-hamclock-ohb.png" alt="9M2PJU HamClock with Open HamClock Backend (OHB)">
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features Section -->
+  <section class="container" id="features">
+    <h2 class="section-title">Engineered for Radio Amateurs</h2>
+    <p class="section-desc">Real-time solar data, dynamic VOACAP HF propagation, on-air QSO maps, satellite tracking, and shack automation.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Native Android App &amp; Termux</h3>
+        <p>Run standalone with the official <strong>Android APK</strong> (embedded native C++ engine, edge-to-edge fullscreen, 24/7 background service) or via <strong>Termux</strong> with Fully Kiosk Browser for low-power (&lt;3W) shack displays.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3>Open HamClock Backend (OHB)</h3>
+        <p>Hardcoded directly to <code>n7six.hamclock.app:80</code>. Seamless data streaming without <code>/etc/hosts</code> workarounds or legacy CSI server downtime.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🧭</div>
+        <h3>Antenna Rotator Control</h3>
+        <p>Full 1-axis (Azimuth) and 2-axis (Az/El) antenna rotator tracking via Hamlib <code>rotctld</code>. Auto-turn to DX bearing and real-time satellite tracking.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📻</div>
+        <h3>Transceiver CAT Integration</h3>
+        <p>Connects to your rig with <code>rigctld</code> or <code>flrig</code>. Auto-switches VOACAP propagation bands as you turn your VFO, with Click-to-Tune (QSY) from DX spots.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📡</div>
+        <h3>Satellite Orbit Predictions</h3>
+        <p>Live satellite ground tracking (ISS, AO-91, RS-44, IO-117) with Doppler-shifted frequency telemetry, pass azimuth/elevation timers, and sky tracks.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">☀️</div>
+        <h3>NOAA Space Weather & SDO</h3>
+        <p>Live Solar Flux Index (SFI), Sunspot Number (SSN), Planetary K-index, Solar Dynamic Observatory (SDO) multi-wavelength imagery, and Aurora ovals.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📜</div>
+        <h3>ADIF Live Log Ingestion</h3>
+        <p>Receive real-time UDP QSO broadcasts from WSJT-X, N1MM Logger+, and Log4OM, rendering on-air contacts instantly as glowing pins on the world map.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Android & Termux Showcase Section -->
+  <section class="container" id="android-showcase">
+    <div class="tribute-card" style="border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(17, 24, 39, 0.95) 100%);">
+      <span class="tribute-badge" style="background: var(--accent-emerald-dim); color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.4);">📱 Android Shack Display • Official Standalone App</span>
+      <h2>HamClock for Android (Native App &amp; Termux)</h2>
+      <p>Transform any spare Android phone, tablet, or TV box into a dedicated, low-power (&lt;3W) shack touch clock. Install the standalone official <strong>Android App (.apk)</strong> with embedded C++ engine and edge-to-edge UI, or run via <strong>Termux</strong> with <strong>Fully Kiosk Browser</strong>.</p>
+      
+      <!-- Download Buttons -->
+      <div style="display: flex; justify-content: center; gap: 16px; margin: 24px 0; flex-wrap: wrap;">
+        <a href="https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases/latest" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: var(--accent-emerald); color: #000; padding: 12px 24px; border-radius: 8px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3); font-size: 1rem; transition: var(--transition);">
+          📥 Download Latest Android APK (.apk)
+        </a>
+        <a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer/blob/main/docs/ANDROID.md" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-highlight); padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 1rem; transition: var(--transition);">
+          📖 Android Installation Guide
+        </a>
+      </div>
+
+      <!-- Highlights Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 24px 0; text-align: left;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: var(--accent-emerald); margin-bottom: 6px;">⚡ 100% Native Embedded Engine</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">Runs the full C++ backend natively. No Termux, root, or Linux chroot needed.</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 6px;">📍 GPS Maidenhead Auto-Sync</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">Automatically acquires device GPS and synchronizes DE grid locator in real-time.</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: var(--accent-amber); margin-bottom: 6px;">📦 Config Backup &amp; Restore (SAF)</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">One-tap export/import of station EEPROM, presets, and preferences via ZIP &amp; Share Sheet.</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: #a855f7; margin-bottom: 6px;">🌙 OLED Care &amp; Night Dimmer</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">Pixel-shift anti-burn-in protection and auto nighttime dimming schedule (10PM–6AM).</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: #ec4899; margin-bottom: 6px;">📺 Android TV &amp; Car Head Unit</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">Full D-Pad remote navigation support and automatic USB charger power wake/sleep.</div>
+        </div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+          <div style="font-weight: 700; color: var(--accent-blue); margin-bottom: 6px;">🌐 24/7 Daemon &amp; LAN Streaming</div>
+          <div style="font-size: 0.88rem; color: var(--text-muted);">Continuous background foreground service with live web mirror at <code>http://&lt;IP&gt;:8081/live.html</code>.</div>
+        </div>
+      </div>
+
+      <div class="screenshot-wrap" style="max-width: 750px; margin: 24px auto 8px;">
+        <img src="images/9m2pju-hamclock-android.jpg" alt="HamClock running on Android Phone using Termux with Fully Kiosk Browser">
+      </div>
+    </div>
+  </section>
+
+  <!-- Resolution Showcase -->
+  <section class="container">
+    <h2 class="section-title">📐 Four Scaled Resolutions</h2>
+    <p class="section-desc">Bespoke, razor-sharp vector/bitmap scaling pre-compiled for any display or remote device.</p>
+
+    <div class="res-grid">
+      <div class="res-card">
+        <h4>800 × 480</h4>
+        <div class="res-dim">Standard Definition</div>
+        <p>Ideal for 5"–7" Raspberry Pi touchscreens, mobile browsers, and compact kiosk builds.</p>
+      </div>
+
+      <div class="res-card" style="border-color: var(--accent-emerald);">
+        <h4 style="color: var(--accent-emerald);">1600 × 960 ⭐</h4>
+        <div class="res-dim">Full HD Recommended</div>
+        <p>The sweet spot for desktop monitors, iPads, tablets, and shack dashboard screens.</p>
+      </div>
+
+      <div class="res-card">
+        <h4>2400 × 1440</h4>
+        <div class="res-dim">2K Quad HD</div>
+        <p>Stunning crispness for high-DPI computer monitors and wide shack control screens.</p>
+      </div>
+
+      <div class="res-card">
+        <h4>3200 × 1920</h4>
+        <div class="res-dim">4K Ultra HD</div>
+        <p>Maximum detail for large 4K televisions, club station dashboards, and emergency ops centers.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Memorial Tribute Section -->
+  <section class="container" id="tribute">
+    <div class="tribute-card">
+      <span class="tribute-badge">🕊️ In Memoriam</span>
+      <h2>Elwood Downey, WB0OEW (Silent Key - SK)</h2>
+      <p>HamClock was conceived and brought to life by **Elwood Downey (WB0OEW)** under the banner of Clear Sky Institute. An accomplished astronomer and software architect (author of *XEphem*), Elwood gifted the amateur radio world this masterwork of space science and radio propagation telemetry.</p>
+      <div class="tribute-quote">
+        "His signals continue to propagate across the globe. 73 OM, de Open HamClock Community."
+      </div>
+    </div>
+  </section>
+
+  <!-- Sponsor Section -->
+  <section class="container" id="sponsor" style="margin-bottom: 60px; text-align: center;">
+    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 40px 24px; max-width: 760px; margin: 0 auto;">
+      <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 12px;">💖 Support the Project</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 24px; max-width: 600px; margin-left: auto; margin-right: auto;">
+        Your contributions help keep the <strong>Open HamClock Backend (OHB)</strong> online and support ongoing development of packaging for Android, Windows, and Linux.
+      </p>
+
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 24px; margin-bottom: 8px;">
+        <!-- DuitNow / TNG QR Card -->
+        <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; display: inline-flex; flex-direction: column; align-items: center; max-width: 260px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);">
+          <img src="images/9m2pju-donation-qr.png" alt="DuitNow / Touch 'n Go QR Donation - 9M2PJU" style="width: 200px; height: auto; border-radius: 8px; display: block; margin-bottom: 10px;">
+          <span style="font-size: 0.85rem; font-weight: 700; color: #FF3366; letter-spacing: 0.02em;">🇲🇾 DuitNow / TNG QR</span>
+          <span style="font-size: 0.75rem; color: var(--text-dim); margin-top: 2px;">Scan with any Malaysian Banking / eWallet App</span>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+          <a href="https://buymeacoffee.com/9m2pju" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #FFDD00; color: #000; padding: 10px 20px; border-radius: 8px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(255, 221, 0, 0.2); transition: var(--transition);">
+            ☕ Buy Me a Coffee
+          </a>
+          <a href="https://wise.com/pay/me/faizulz13" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #163300; color: #9FE870; border: 1px solid #9FE870; padding: 10px 20px; border-radius: 8px; font-weight: 700; text-decoration: none; box-shadow: 0 4px 12px rgba(159, 232, 112, 0.15); transition: var(--transition);">
+            💸 Support via Wise
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <ul class="footer-links">
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer" target="_blank">GitHub Repository</a></li>
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer/issues" target="_blank">Report Issues</a></li>
+        <li><a href="https://n7six.hamclock.app" target="_blank">N7SIX HamClock Backend</a></li>
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases" target="_blank">Android App (.apk)</a></li>
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer/blob/main/docs/ANDROID.md" target="_blank">Android &amp; Termux Guide</a></li>
+        <li><a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer/blob/main/docs/WINDOWS.md" target="_blank">Windows Guide</a></li>
+        <li><a href="https://snapcraft.io/hamclock" target="_blank">Snap Store</a></li>
+        <li><a href="https://hamradio.my" target="_blank">HamRadio.my</a></li>
+      </ul>
+      <p class="footer-copy">Originally created by <strong>Elwood Downey (WB0OEW, SK)</strong>. Maintained by <strong>9M2PJU</strong> &amp; The Open HamClock Community. Released under the <a href="https://github.com/9M2PJU/9M2PJU-HamClock-Installer/blob/main/LICENSE" target="_blank" style="color:var(--text-muted); text-decoration:underline;">MIT License</a>. 73!</p>
+    </div>
+  </footer>
+
+  <!-- Script for Tabs & Copy -->
+  <script>
+    const commands = {
+      native: "curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install.sh | bash\n# Or non-interactive with pre-selected resolution:\n# curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install.sh | TARGET=1600x960 bash\n# Or non-interactive with auto-start:\n# curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install.sh | AUTOSTART=xdg bash",
+      apk: "# Download Official Universal APK (Latest Release):\nhttps://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases/latest/download/9M2PJU-HamClock.apk\n\n# Or browse all release packages (Universal, ARM64, ARMv7, x86_64, x86):\nhttps://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases",
+      windows: "irm https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/scripts/install.ps1 | iex",
+      winnative: "# Download pre-compiled standalone Windows executables:\n# https://github.com/9M2PJU/9M2PJU-HamClock-Installer/releases/latest\n\n# Run from Command Prompt or PowerShell:\nHamClock-7.6.1-windows-1600x960.exe\n\n# Open http://localhost:8081/live.html in any browser.",
+      android: "pkg update -y && pkg install -y curl && bash -c \"$(curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/termux/install.sh)\"",
+      aur: "yay -S hamclock-git\n# Launch with resolution:\nhamclock -r 1600x960",
+      snap: "sudo snap install hamclock\n# Launch with resolution:\nhamclock -r 1600x960",
+      deb: "sudo dpkg -i hamclock_7.6.1-1_amd64.deb\n# Launch with resolution:\nhamclock -r 1600x960",
+      rpm: "sudo rpm -Uvh hamclock-7.6.1-1.x86_64.rpm\n# Launch with resolution:\nhamclock -r 1600x960",
+      appimage: "chmod +x HamClock-7.6.1-x86_64.AppImage\n./HamClock-7.6.1-x86_64.AppImage -r 1600x960",
+      docker: "curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install-docker.sh | bash\n# Or non-interactive: curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/main/install-docker.sh | RESOLUTION=1600x960 bash"
+    };
+
+    const hints = {
+      native: "🚀 <strong>Universal 1-Liner:</strong> Interactive prompt asks for resolution target (800x480, 1600x960, 2400x1440, 3200x1920, Web, or RPi framebuffer) and auto-start on login (XDG, systemd, launchd, or xinitrc). Pipe <code>TARGET=1600x960 AUTOSTART=xdg bash</code> for automated mode. After install, run <code>hamclock</code> to start. Report issues on <a href=\"https://github.com/9M2PJU/9M2PJU-HamClock-Installer/issues\" target=\"_blank\">GitHub</a>.",
+      apk: "📱 <strong>Official Native Android App (.apk):</strong> 100% Native Embedded C++ Engine running standalone on Android with hardware-accelerated edge-to-edge fullscreen, 24/7 background foreground service (WakeLock/WifiLock), and LAN streaming at <code>http://&lt;PHONE-IP&gt;:8081/live.html</code>. No Termux or root needed! <a href=\"https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases\" target=\"_blank\" style=\"color:var(--accent-emerald); font-weight:700;\">Download APK from GitHub Releases ➔</a>",
+      android: "📱 <strong>Android via Termux:</strong> Asks for Web or X11 resolution. Keep awake with <code>termux-wake-lock && hamclock -k &</code>, disable battery saver (Unrestricted), and open in <strong>Fully Kiosk Browser</strong> at <code>http://localhost:8081/live.html</code>.",
+      windows: "🪟 <strong>Windows 10/11:</strong> Run PowerShell command. Prompts to choose between WSLg native GUI window or Docker Desktop container.",
+      winnative: "🖥️ <strong>Native Windows .exe:</strong> Download pre-built <code>HamClock-7.6.1-windows-*.exe</code> from <a href=\"https://github.com/9M2PJU/9M2PJU-HamClock-Installer/releases\" target=\"_blank\">GitHub Releases</a> (800x480, 1600x960, 2400x1440, 3200x1920). Statically linked PE32+ executable that runs the web-only backend natively on Windows with zero external DLL dependencies. Open <code>http://localhost:8081/live.html</code> in any browser. See <a href=\"https://github.com/9M2PJU/9M2PJU-HamClock-Installer/blob/main/docs/WINDOWS.md\" target=\"_blank\">Windows Guide</a> for details.",
+      docker: "🐳 <strong>Docker Multi-Arch:</strong> Interactive resolution prompt [1-4]. Runs headless container. Access UI at <code>http://localhost:8081/live.html</code>.",
+      aur: "🏹 <strong>Arch Linux (AUR):</strong> Installs all resolution binaries simultaneously. Launch with <code>hamclock -r 1600x960</code>, <code>hamclock-1600x960</code>, or set <code>HAMCLOCK_RES=1600x960</code>.",
+      deb: "🐧 <strong>Debian / Ubuntu / Raspberry Pi:</strong> All resolutions pre-packaged. Launch with <code>hamclock -r 1600x960</code> (or <code>800x480</code>, <code>2400x1440</code>, <code>3200x1920</code>).",
+      rpm: "🎩 <strong>Fedora / RHEL / openSUSE:</strong> All resolutions pre-packaged. Launch with <code>hamclock -r 1600x960</code> or <code>hamclock-1600x960</code>.",
+      appimage: "📦 <strong>Universal Linux AppImage:</strong> Portable executable containing all resolutions. Launch with <code>./n7six.HamClock.v7.6.1.AppImage -r 1600x960</code>.",
+      snap: "📦 <strong>Snapcraft:</strong> Sandboxed auto-updating package. Launch with <code>hamclock -r 1600x960</code>."
+    };
+
+    function setTab(tab) {
+      document.querySelectorAll('.install-tab').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('cmd-display').innerText = commands[tab];
+      document.getElementById('cmd-hint').innerHTML = hints[tab] || '';
+      document.getElementById('copy-text').innerText = "📋 Copy";
+    }
+
+    function copyCommand() {
+      const text = document.getElementById('cmd-display').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById('copy-text').innerText = "✅ Copied!";
+        setTimeout(() => {
+          document.getElementById('copy-text').innerText = "📋 Copy";
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

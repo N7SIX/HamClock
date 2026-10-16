@@ -1,0 +1,139 @@
+# Edit this file to introduce tasks to be run by cron.
+#
+# Each task to run has to be defined through a single line
+# indicating with different fields when the task will be run
+# and what command to run for the task
+#
+# To define the time you can provide concrete values for
+# minute (m), hour (h), day of month (dom), month (mon),
+# and day of week (dow) or use '*' in these fields (for 'any').
+#
+# Notice that tasks will be started based on the cron's system
+# daemon's notion of time and timezones.
+#
+# Output of the crontab jobs (including errors) is sent through
+# email to the user the crontab file belongs to (unless redirected).
+#
+# For example, you can run a backup of all your user accounts
+# at 5 a.m every week with:
+# 0 5 * * 1 tar -zcf /var/backups/home.tgz /home/
+#
+# For more information see the manual pages of crontab(5) and cron(8)
+#
+# m h  dom mon dow   command
+
+# sudo crontab -u www-data -e
+
+# Adjustments may be needed on times
+
+SHELL=/bin/bash
+BASE=/opt/hamclock-backend
+SCRIPTS=/opt/hamclock-backend/scripts
+VENV=/opt/hamclock-backend/venv
+VIRTUAL_ENV=/opt/hamclock-backend/venv
+HOME=/var/www
+XDG_CACHE_HOME=/opt/hamclock-backend/tmp
+MPLCONFIGDIR=/opt/hamclock-backend/tmp/mpl
+PATH=/opt/hamclock-backend/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LC_ALL=C
+LANG=C
+
+# get the latest stable and beta versions
+57 * * * *     $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_versions.pl
+
+44 * * * *     $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/ssn_simple.py
+*/5 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/swind_simple.py
+0-58/2 * * * * $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/bz_simple.py
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/flux_simple.py
+*/15 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_launches.py
+1-57/4 * * * * $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/xray_simple.py
+1-57/4 * * * * $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_proton.py
+0 6 * * *      $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_IOTA.py
+
+# the json updates "estimated" multiple times between its regular 3-hour updates. Also, the 3-hour update isn't
+# an exact time after the 3rd hour. So for the 3 hour updates, we'll do 10 and 40 (AI says it should be ready
+# by 40) and then just do this every hour to catch estimated updates.
+10,40 * * * *  $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/kindex_simple.py
+
+20,50 * * * *  $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/dst_simple.py
+25 8 * * *     $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/gen_dxpeditions_spots.py
+
+0 1 * * *      $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_solarflux-history.sh
+0 1 * * *      $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_ssn_history.pl
+
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/web15rss_fetch.py
+*/10 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_hamqsl.py
+
+*/2 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/poll_activenets.py
+
+*/2 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/update_world_wx.py
+
+5 */8 * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_contest-calendar.sh
+
+# Runs AMSAT Active Satellite Filter and builds TLEs
+0 */2 * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/fetch_tle.sh
+# SatNogs query
+5 4 * * *      $SCRIPTS/cron-wrapper.sh $SCRIPTS/fetch_sat_freq.sh
+
+# Give NOAA time to breathe
+2,17,32,47 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_aurora.py
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_noaaswx.py
+
+# ============================================================================
+# POTA, SOTA, WWFF
+# ----------------------------------------------------------------------------
+# WWFF compliance note (Mario, DL4MFM / cqgma.org):
+#
+#   The GMA WWFF spot API is rate limited to 1 request/minute and 1440
+#   requests/day per client. Mario has asked software authors to cache
+#   spot data centrally rather than letting every installation poll
+#   cqgma.org directly. A key must be requested from cqgma to use the API.
+#
+#   How OHB complies:
+#     * The OHB runs fetch_wwff_cache.pl once per minute and
+#       publishes the result at /ham/HamClock/ONTA/wwff_spots.json.
+#     * When CQGMA_API_KEY is set in .env, OHB gets the json from cqgma.org directly.
+#     * When key is not set, OHB gets json from 
+#          http://$MIRROR/ham/HamClock/ONTA/wwff_spots.json
+#       and falls back to
+#          http://n7six.hamclock.app/ham/HamClock/ONTA/wwff_spots.json
+# ============================================================================
+*/2 * * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/fetch_wwff_cache.pl
+1-59/2 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_onta.pl
+1-59/2 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_iota.pl
+1-59/2 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_xonta.pl
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_bandactivity.pl
+
+0 3 * * 1      $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_wwff_cache.pl
+0 3 * * 1      $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_llota_cache.pl
+0 4 * * 1,4    $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_sota_cache.pl
+15 3 * * 0     $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_pota_parks_cache.sh
+
+1-56/5 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_drap.sh
+
+20 2 * * *     $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_cty_wt_mod.sh
+
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_all_sdo.sh
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_pota_scheduled.pl
+
+# maps
+10,40 * * * *  $SCRIPTS/cron-wrapper.sh $SCRIPTS/kc2g_muf_heatmap.sh
+20 */3 * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_cloud_maps.sh
+30 */3 * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_tropo_maps.sh
+*/5 * * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_drap_maps.sh
+3,18,33,48 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_aurora_maps.sh
+0 2,8,14,20 * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/update_wx_mb_maps.sh
+
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_pico.py
+
+# tropical cyclone
+# Fetch HamClock tropical cyclone data every six hours.
+# Writes to: /opt/hamclock-backend/htdocs/ham/HamClock/storms/storms.txt
+# The script creates the storms/ directory if missing.
+7 */6 * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/fetch_cyclones.py
+*/30 * * * *   $SCRIPTS/cron-wrapper.sh $SCRIPTS/probe_dynamic_endpoints.sh
+*/5 * * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/generate_status_json.sh
+*/5 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_marine_warnings.py
+*/15 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_fires.py
+*/5 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_firewx_warnings.py
+*/30 * * * *    $SCRIPTS/cron-wrapper.sh $VENV/bin/python3 $SCRIPTS/fetch_quakes.py
