@@ -5,7 +5,7 @@
 ### *The Quintessential Space Weather, Radio Propagation & Telemetry Dashboard for Amateur Radio*
 
 [![HamClock Version](https://img.shields.io/badge/version-7.6.1-blue.svg?style=for-the-badge&logo=cplusplus)](file:///home/x/ESPHamClock/version.cpp)
-[![Backend Status](https://img.shields.io/badge/backend-N7SIX%20HamClock%20Backend-brightgreen.svg?style=for-the-badge&logo=server)](https://n7six.hamclock.app)
+[![Backend Status](https://img.shields.io/badge/backend-N7SIX%20HamClock%20Backend-brightgreen.svg?style=for-the-badge&logo=server)](http://n7six-hamclock.duckdns.org)
 [![AUR package](https://img.shields.io/aur/version/hamclock-git?color=1793D1&label=AUR&logo=archlinux&style=for-the-badge)](https://aur.archlinux.org/packages/hamclock-git)
 [![Snap Store](https://img.shields.io/badge/Snap%20Store-Stable-E95420.svg?style=for-the-badge&logo=snapcraft&logoColor=white)](https://snapcraft.io/hamclock)
 [![Windows Support](https://img.shields.io/badge/Windows-Native%20.exe%20%7C%20WSL2%20%7C%20Docker-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](docs/WINDOWS.md)
@@ -23,16 +23,16 @@
 
 ---
 
-[Origin & Tribute](#-origin--the-silent-key-legacy) •
-[OHB Migration](#-the-open-hamclock-backend-ohb-era) •
-[Features](#-feature-matrix) •
-[Quick Install](#-one-liner-quick-install) •
-[Android App](#-android-support-native-apk--termux) •
-[Windows](#-windows-support-native-exe-powershell--wsl2) •
-[Docker Setup](#-docker--docker-compose) •
-[Rotator & Radio](#-rotator--radio-cat-integration) •
-[Docs](#-documentation-library) •
-[Manual Build](#-manual-compilation--build-matrix) •
+[Origin & Tribute](#-origin--the-silent-key-legacy) ï¿½
+[OHB Migration](#-the-open-hamclock-backend-ohb-era) ï¿½
+[Features](#-feature-matrix) ï¿½
+[Quick Install](#-one-liner-quick-install) ï¿½
+[Android App](#-android-support-native-apk--termux) ï¿½
+[Windows](#-windows-support-native-exe-powershell--wsl2) ï¿½
+[Docker Setup](#-docker--docker-compose) ï¿½
+[Rotator & Radio](#-rotator--radio-cat-integration) ï¿½
+[Docs](#-documentation-library) ï¿½
+[Manual Build](#-manual-compilation--build-matrix) ï¿½
 [CLI & Web Server](#-remote-web-interface--rest-api)
 
 ---
@@ -43,7 +43,7 @@
 
 **HamClock** was conceived, architected, and brought to life by **Elwood Downey (WB0OEW)** under the banner of **Clear Sky Institute**. 
 
-Elwood—an accomplished astronomer, software architect (renowned creator of *XEphem*), and passionate radio amateur—originally designed HamClock as a compact, self-contained microcontroller project for the **Adafruit Feather HUZZAH ESP8266** paired with an Adafruit RA8875 TFT driver. 
+Elwoodï¿½an accomplished astronomer, software architect (renowned creator of *XEphem*), and passionate radio amateurï¿½originally designed HamClock as a compact, self-contained microcontroller project for the **Adafruit Feather HUZZAH ESP8266** paired with an Adafruit RA8875 TFT driver. 
 
 As the project gained massive popularity across the global amateur radio community, Elwood continuously expanded its capabilities, developing an elegant POSIX abstraction layer ([`ArduinoLib`](file:///home/x/ESPHamClock/ArduinoLib)) that allowed the exact same codebase to compile natively on **Linux, Raspberry Pi, Inovato Quadra, macOS, and FreeBSD**. For years, Elwood personally financed and hosted the high-reliability Clear Sky Institute backend servers that parsed NOAA space weather, satellite TLEs, VOACAP models, and solar imagery for tens of thousands of clocks worldwide.
 
@@ -60,7 +60,7 @@ To ensure HamClock remains fully functional, reliable, and open for future gener
 
 ### What Changed in Version 4.24+ (Current: 7.6.1)
 
-- **Hard-Coded Community Backend**: HamClock now connects directly to `n7six.hamclock.app:80` by default.
+- **Hard-Coded Community Backend**: HamClock now connects directly to `n7six-hamclock.duckdns.org:80` by default.
 - **No Switching Scripts or DNS Redirection Required**: Older transitional scripts (`sudo ohb`, `sudo fix-hosts`, `sudo csi`) and manual `/etc/hosts` modifications are no longer required.
 - **Seamless Upgrade**: Full backward compatibility with existing user configurations, callsign profiles, and NVRAM settings in `~/.hamclock/`.
 - **Modern Service Restorations**: Space weather feeds, NOAA alerts, SDO solar imagery, VOACAP HF propagation models, DX cluster spots, satellite orbital TLEs, and contest calendars are completely restored and maintained on high-availability community servers.
@@ -74,7 +74,7 @@ To ensure HamClock remains fully functional, reliable, and open for future gener
 | Subsystem | Capabilities & Integrations |
 | :--- | :--- |
 | **?? Space Weather** | Live Solar Flux Index (SFI), Sunspot Number (SSN), Planetary Kp & Ap indices, NOAA GOES-18 X-ray solar flare flux, solar wind velocity & density, interplanetary magnetic field ($B_z$ / $B_t$), NOAA alerts, and real-time Solar Dynamics Observatory (SDO) EUV imagery. |
-| **?? Propagation & Bands** | VOACAP point-to-point HF propagation prediction engine, real-time 2200m–10m & 630m band condition matrix, Take-Off Angle (TOA) adjustments, live band activity pane, and live synchronized NCDXF/IARU international beacon monitoring. |
+| **?? Propagation & Bands** | VOACAP point-to-point HF propagation prediction engine, real-time 2200mï¿½10m & 630m band condition matrix, Take-Off Angle (TOA) adjustments, live band activity pane, and live synchronized NCDXF/IARU international beacon monitoring. |
 | **??? Cartography & Grayline** | High-resolution Mercator, Robinson, and Azimuthal (Great Circle / beam heading) projections centered on your DE (QTH). Live day/night terminator (grayline) mapping, Maidenhead 6-character grid overlays, CQ zones, ITU zones, and Country/State borders toggle badge. |
 | **?? DX Cluster, APRS & Alerts** | Live DX cluster telnet/web ingestion (IOTA, WWBOTA, POTA, SOTA, ONTA), nearby APRS tracking, High Altitude Balloon (HAB) telemetry, HamAlert.org integration, PSK Reporter FT8/FT4/CW real-time spot pins, and custom callsign watchlists with audio/visual alerts. |
 | **?? Emergency & Environmental** | Real-time global active wildfire mapping, Fire Weather (FireWx) warnings, NWS Marine Warnings, live USGS Earthquake tracking, and Weather Fax (WeFax) charts. |
@@ -104,7 +104,7 @@ curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-HamClock-Installer/ma
 ```
 
 ### Android (Official Native App - APK) ?
-> *100% Native Embedded C++ Engine — No Termux or root required.*
+> *100% Native Embedded C++ Engine ï¿½ No Termux or root required.*
 Download the latest APK directly from [GitHub Releases](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases):
 - [?? **Download Universal APK (`9M2PJU-HamClock.apk`)**](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases/latest)
 
@@ -241,7 +241,7 @@ For instant installation without compiling from source, pre-built binary package
 > sudo snap install hamclock
 > ```
 >
-> Track build: [GitHub Actions — Snap Build](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/actions/workflows/snap.yml)
+> Track build: [GitHub Actions ï¿½ Snap Build](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/actions/workflows/snap.yml)
 
 ### ?? Arch Linux (AUR)
 ```bash
@@ -288,10 +288,10 @@ Download the latest `HamClock-7.6.1-windows-*.exe` from the [GitHub Releases pag
 
 | Executable File | Resolution | Recommended Use |
 | :--- | :---: | :--- |
-| `HamClock-7.6.1-windows-800x480.exe` | 800 × 480 | Standard, smaller displays |
-| `HamClock-7.6.1-windows-1600x960.exe` | 1600 × 960 | Large, recommended default |
-| `HamClock-7.6.1-windows-2400x1440.exe` | 2400 × 1440 | Hi-DPI |
-| `HamClock-7.6.1-windows-3200x1920.exe` | 3200 × 1920 | 4K UHD |
+| `HamClock-7.6.1-windows-800x480.exe` | 800 ï¿½ 480 | Standard, smaller displays |
+| `HamClock-7.6.1-windows-1600x960.exe` | 1600 ï¿½ 960 | Large, recommended default |
+| `HamClock-7.6.1-windows-2400x1440.exe` | 2400 ï¿½ 1440 | Hi-DPI |
+| `HamClock-7.6.1-windows-3200x1920.exe` | 3200 ï¿½ 1920 | 4K UHD |
 
 Run the `.exe` from Command Prompt or PowerShell, then open `http://localhost:8081/live.html` in any browser. No installation required - the executable is statically linked and only depends on Windows system DLLs.
 
@@ -340,7 +340,7 @@ The official standalone Android APK runs a 100% native embedded C++ engine direc
 - **?? 100% Native Embedded C++ Engine**: Runs the full HamClock backend natively.
 - **?? GPS & Maidenhead Locator Sync**: Auto GPS coordinates acquisition & real-time station DE grid locator sync.
 - **?? Config Backup & Restore (SAF)**: One-tap export/import of station EEPROM, presets, and preferences via ZIP & Share Sheet.
-- **?? OLED Burn-in Care & Night Dimmer**: Pixel-shift anti-burn-in protection and auto nighttime dimming schedule (10PM–6AM).
+- **?? OLED Burn-in Care & Night Dimmer**: Pixel-shift anti-burn-in protection and auto nighttime dimming schedule (10PMï¿½6AM).
 - **?? Android TV & Car Ready**: Full D-Pad remote navigation support and automatic USB charger power wake/sleep.
 - **?? Edge-to-Edge Fullscreen Display**: Hardware-accelerated UI with responsive multi-touch.
 - **?? 24/7 Background Foreground Service**: Built-in WakeLock/WifiLock support to prevent sleep.
@@ -349,7 +349,7 @@ The official standalone Android APK runs a 100% native embedded C++ engine direc
 - **?? Auto-Start on Boot**: Toggle in settings for dedicated tablet monitors.
 
 ?? **Download Packages from [GitHub Releases](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases):**
-- [?? **Download Universal APK (`9M2PJU-HamClock.apk`)**](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases/latest) *(Recommended — Universal for all devices)*
+- [?? **Download Universal APK (`9M2PJU-HamClock.apk`)**](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases/latest) *(Recommended ï¿½ Universal for all devices)*
 - **Architecture-Specific APKs:** `arm64-v8a` (64-bit ARM), `armeabi-v7a` (32-bit ARM), `x86_64`, `x86`
 
 ---
@@ -452,15 +452,15 @@ docker run -d \
 
 HamClock supports four distinct display resolutions tailored for different screen sizes:
 
-| Resolution | Width × Height | Best Suited For |
+| Resolution | Width ï¿½ Height | Best Suited For |
 | :--- | :--- | :--- |
-| **`800x480`** | 800 × 480 px | Standard definition, smaller 5"–7" Raspberry Pi displays, low-bandwidth web access. |
-| **`1600x960`** *(Recommended)* | 1600 × 960 px | Full HD (1080p) monitors, desktop windows, iPads, tablets, and wall dashboard screens. |
-| **`2400x1440`** | 2400 × 1440 px | 2K / QHD monitors, high-DPI displays. |
-| **`3200x1920`** | 3200 × 1920 px | 4K UHD large televisions and ultra-high-resolution displays. |
+| **`800x480`** | 800 ï¿½ 480 px | Standard definition, smaller 5"ï¿½7" Raspberry Pi displays, low-bandwidth web access. |
+| **`1600x960`** *(Recommended)* | 1600 ï¿½ 960 px | Full HD (1080p) monitors, desktop windows, iPads, tablets, and wall dashboard screens. |
+| **`2400x1440`** | 2400 ï¿½ 1440 px | 2K / QHD monitors, high-DPI displays. |
+| **`3200x1920`** | 3200 ï¿½ 1920 px | 4K UHD large televisions and ultra-high-resolution displays. |
 
 ### How to Change Resolution in Docker
-All four resolutions are **pre-compiled** inside the Docker image. You can switch resolutions instantly by updating the `RESOLUTION` environment variable—no container rebuild needed:
+All four resolutions are **pre-compiled** inside the Docker image. You can switch resolutions instantly by updating the `RESOLUTION` environment variableï¿½no container rebuild needed:
 
 1. Edit `RESOLUTION` in `docker-compose.yml`:
    ```yaml
@@ -539,7 +539,7 @@ TARGET=fb0-800x480 curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-Ha
 
 ## ?? Rotator & Radio CAT Integration
 
-HamClock is not just a display—it is a complete, real-time command center for your ham shack. Built by **Elwood Downey (WB0OEW)**—the creator of the renowned *XEphem* astronomical telescope software—HamClock features native TCP/IP socket integration for:
+HamClock is not just a displayï¿½it is a complete, real-time command center for your ham shack. Built by **Elwood Downey (WB0OEW)**ï¿½the creator of the renowned *XEphem* astronomical telescope softwareï¿½HamClock features native TCP/IP socket integration for:
 
 - **?? Antenna Rotator Control (`rotctld`)**:
   - Automatically commands 1-axis and 2-axis rotators (Yaesu, AlfaSpid, Easy-Comm, Green Heron, etc.).
@@ -611,10 +611,10 @@ HamClock provides three output architectures across four resolutions, plus a nat
 
 | Target Resolution | X11 Desktop GUI | Headless Web Server Only | RPi Direct Framebuffer (`/dev/fb0`) | Native Windows `.exe` (MinGW) |
 | :--- | :--- | :--- | :--- | :--- |
-| **800 × 480** *(Standard)* | `make hamclock-800x480` | `make hamclock-web-800x480` | `make hamclock-fb0-800x480` | `make mingw-web-800x480` |
-| **1600 × 960** *(Large)* | `make hamclock-1600x960` | `make hamclock-web-1600x960` | `make hamclock-fb0-1600x960` | `make mingw-web-1600x960` |
-| **2400 × 1440** *(Hi-DPI)* | `make hamclock-2400x1440` | `make hamclock-web-2400x1440` | `make hamclock-fb0-2400x1440` | `make mingw-web-2400x1440` |
-| **3200 × 1920** *(4K UHD)* | `make hamclock-3200x1920` | `make hamclock-web-3200x1920` | `make hamclock-fb0-3200x1920` | `make mingw-web-3200x1920` |
+| **800 ï¿½ 480** *(Standard)* | `make hamclock-800x480` | `make hamclock-web-800x480` | `make hamclock-fb0-800x480` | `make mingw-web-800x480` |
+| **1600 ï¿½ 960** *(Large)* | `make hamclock-1600x960` | `make hamclock-web-1600x960` | `make hamclock-fb0-1600x960` | `make mingw-web-1600x960` |
+| **2400 ï¿½ 1440** *(Hi-DPI)* | `make hamclock-2400x1440` | `make hamclock-web-2400x1440` | `make hamclock-fb0-2400x1440` | `make mingw-web-2400x1440` |
+| **3200 ï¿½ 1920** *(4K UHD)* | `make hamclock-3200x1920` | `make hamclock-web-3200x1920` | `make hamclock-fb0-3200x1920` | `make mingw-web-3200x1920` |
 
 > **Windows cross-compile** requires the MinGW-w64 toolchain (`mingw-w64-gcc` on Arch, `g++-mingw-w64-x86-64` on Debian/Ubuntu). The resulting `.exe` is a statically linked PE32+ executable that runs the web-only backend natively on Windows 10/11 without WSL or Docker. See [docs/WINDOWS.md](docs/WINDOWS.md) for details.
 
@@ -643,7 +643,7 @@ Usage:   hamclock [options]
 | :--- | :--- | :--- | :--- |
 | `-k` | *none* | Skip initial setup countdown and boot immediately | `hamclock -k` |
 | `-g` | *none* | Auto-initialize DE location using public IP geolocation *(requires `-k`)* | `hamclock -k -g` |
-| `-b` | `<host:port>`| Override backend server *(default: `n7six.hamclock.app:80`)* | `hamclock -b n7six.hamclock.app:80` |
+| `-b` | `<host:port>`| Override backend server *(default: `n7six-hamclock.duckdns.org:80`)* | `hamclock -b n7six-hamclock.duckdns.org:80` |
 | `-f` | `on` / `off` | Force initial fullscreen display mode | `hamclock -f on` |
 | `-d` | `<directory>`| Specify working directory *(default: `~/.hamclock/`)* | `hamclock -d /opt/hamclock_data` |
 | `-e` | `<port>` | RESTful web server port *(default: `8080`, `-1` to disable)* | `hamclock -e 8080` |

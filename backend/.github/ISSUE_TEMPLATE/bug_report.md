@@ -29,7 +29,7 @@ If applicable, add screenshots to help explain your problem.
  - Version [e.g. 22]
 
 **Backend:**
- - n7six.hamclock.app:80
+ - n7six-hamclock.duckdns.org:80
  - your own deployment [e.g., OS, hardware]
 
 **Additional context**

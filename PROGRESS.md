@@ -2,7 +2,7 @@
 
 **Repository:** `https://github.com/9M2PJU/9M2PJU-HamClock-Installer`  
 **Maintainer:** 9M2PJU (`9m2pju@hamradio.my` | [HamRadio.my](https://hamradio.my))  
-**Backend:** N7SIX HamClock Backend (`n7six.hamclock.app:80`)  
+**Backend:** N7SIX HamClock Backend (`n7six-hamclock.duckdns.org:80`)  
 **Version:** `7.6.1`
 
 ---
@@ -143,7 +143,7 @@ This project is the definitive open-source installer, multi-platform packaging s
 
 ## 3. Important URLs & References
 - **Live Website**: [https://hamclock.hamradio.my/](https://hamclock.hamradio.my/)
-- **Backend**: [https://n7six.hamclock.app](https://n7six.hamclock.app)
+- **Backend**: [http://n7six-hamclock.duckdns.org](http://n7six-hamclock.duckdns.org)
 - **GitHub Repo**: [https://github.com/9M2PJU/9M2PJU-HamClock-Installer](https://github.com/9M2PJU/9M2PJU-HamClock-Installer)
 - **Android APK Releases**: [https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases](https://github.com/9M2PJU/9M2PJU-HamClock-Android-Releases/releases)
 - **AUR Package**: [https://aur.archlinux.org/packages/hamclock-git](https://aur.archlinux.org/packages/hamclock-git)

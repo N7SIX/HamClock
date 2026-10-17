@@ -32,7 +32,7 @@ from collections import defaultdict
 # Key  : short label used in output
 # Value: base URL up to (but not including) the filename
 SERVERS = {
-    "ohb": "http://n7six.hamclock.app/ham/HamClock/maps",
+    "ohb": "http://n7six-hamclock.duckdns.org/ham/HamClock/maps",
     "csi": "https://clearskyinstitute.com/ham/HamClock/maps",
 }
 

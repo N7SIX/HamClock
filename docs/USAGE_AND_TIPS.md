@@ -29,7 +29,7 @@ Usage: hamclock [options]
 
   -k           Skip initial setup countdown and boot directly to clock.
   -g           Auto-initialize DE station location using IP-based geolocation.
-  -b <host:port> Override default backend server (default: n7six.hamclock.app:80).
+  -b <host:port> Override default backend server (default: n7six-hamclock.duckdns.org:80).
   -f on|off    Force initial fullscreen display mode.
   -d <dir>     Specify working and NVRAM directory (default: ~/.hamclock).
   -e <port>    RESTful web server port (default: 8080).

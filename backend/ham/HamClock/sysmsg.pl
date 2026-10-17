@@ -31,7 +31,7 @@ if ($alpha eq 'true') {
     }
 } else {
     # Pull (proxy) from the host provided in ALPHA_INSTALL
-    my $host = $alpha || 'n7six.hamclock.app';
+    my $host = $alpha || 'n7six-hamclock.duckdns.org';
     $host =~ s|^https?://||;
     my $url = "http://$host/ham/HamClock/sysmsg.pl";
 

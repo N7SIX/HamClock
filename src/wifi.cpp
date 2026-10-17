@@ -3,7 +3,7 @@
 
 #include "HamClock.h"
 
-#define DEFAULT_HOST "n7six.hamclock.app"
+#define DEFAULT_HOST "n7six-hamclock.duckdns.org"
 // host name and port of backend server
 const char *backend_host = DEFAULT_HOST;
 int backend_port = 80;

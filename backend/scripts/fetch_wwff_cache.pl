@@ -55,7 +55,7 @@ use File::Copy qw(move);
 use File::Basename qw(dirname);
 use File::Path qw(make_path);
 
-my $MIRROR     = $ENV{MIRROR} || 'n7six.hamclock.app';
+my $MIRROR     = $ENV{MIRROR} || 'n7six-hamclock.duckdns.org';
 my $GMA_SOURCE = 'https://www.gma.rocks/api/spots/wwff/';
 
 # Get CQGMA_API_KEY from environment or .env file

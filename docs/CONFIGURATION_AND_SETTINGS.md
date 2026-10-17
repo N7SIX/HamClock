@@ -57,7 +57,7 @@ HamClock v7.6.1 introduces a built-in touchscreen virtual keyboard. Whenever an 
 ---
 
 ### Page 4: Data Sources, DX Cluster & Telemetry Feeds
-- **Backend Host**: Hardcoded to `n7six.hamclock.app:80` (N7SIX HamClock Backend).
+- **Backend Host**: Hardcoded to `n7six-hamclock.duckdns.org:80` (N7SIX HamClock Backend).
 - **DX Cluster**:
   - Server hostname (e.g. `dxc.nc7j.com` or your local cluster node).
   - Port (default: `7300`).

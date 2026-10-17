@@ -91,7 +91,7 @@ SDO_DIR="${SDO_DIR:-/opt/hamclock-backend/htdocs/ham/HamClock/SDO}"
 CACHE_DIR="${CACHE_DIR:-/opt/hamclock-backend/cache}"
 
 # Determine the central mirror host
-MIRROR_HOST="${MIRROR:-n7six.hamclock.app}"
+MIRROR_HOST="${MIRROR:-n7six-hamclock.duckdns.org}"
 
 OUTPUT="${OUTPUT:-/opt/hamclock-backend/htdocs/ham/HamClock/status.html}"
 OUTPUT_JSON="${OUTPUT_JSON:-${OUTPUT%.html}.json}"

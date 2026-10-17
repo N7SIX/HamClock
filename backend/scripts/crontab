@@ -96,7 +96,7 @@ LANG=C
 #     * When key is not set, OHB gets json from 
 #          http://$MIRROR/ham/HamClock/ONTA/wwff_spots.json
 #       and falls back to
-#          http://n7six.hamclock.app/ham/HamClock/ONTA/wwff_spots.json
+#          http://n7six-hamclock.duckdns.org/ham/HamClock/ONTA/wwff_spots.json
 # ============================================================================
 */2 * * * *    $SCRIPTS/cron-wrapper.sh $SCRIPTS/fetch_wwff_cache.pl
 1-59/2 * * * * $SCRIPTS/cron-wrapper.sh $SCRIPTS/gen_onta.pl

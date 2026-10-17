@@ -167,7 +167,7 @@ unless (-d $CACHE_DIR) {
 # no reason to pay LWP::UserAgent's setup cost per-request under FastCGI
 my $UA = LWP::UserAgent->new(
     timeout => 20,
-    agent   => 'OHB-WEFAX/1.0 (+https://n7six.hamclock.app)',
+    agent   => 'OHB-WEFAX/1.0 (+http://n7six-hamclock.duckdns.org)',
 );
 
 # resolve once per worker: prefer ImageMagick 7's 'magick', fall back to the

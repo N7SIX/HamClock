@@ -223,7 +223,7 @@ jobs:
             ```
             
             ---
-            *Built with N7SIX HamClock Backend (`n7six.hamclock.app:80`). Maintained by the N7SIX HamClock community.*
+            *Built with N7SIX HamClock Backend (`n7six-hamclock.duckdns.org:80`). Maintained by the N7SIX HamClock community.*
           files: |
             release-assets/*
         env:

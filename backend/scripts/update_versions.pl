@@ -29,7 +29,7 @@ my $cache_dir  = "/opt/hamclock-backend/cache";
 my $tmp_dir    = "/opt/hamclock-backend/tmp";
 my $tags_url   = "https://api.github.com/repos/$owner/$repo/tags";
 my $v3_ver     = "3.10";  # Hardcoded legacy version support
-my $host_hostname = $ENV{'HOST_HOSTNAME'} // $ENV{'HOSTNAME'} // 'n7six.hamclock.app';
+my $host_hostname = $ENV{'HOST_HOSTNAME'} // $ENV{'HOSTNAME'} // 'n7six-hamclock.duckdns.org';
 
 my $total_failures = 0;
 

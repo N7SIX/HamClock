@@ -37,7 +37,7 @@
 #
 #   -h HOST     Base host URL to probe (default: http://localhost)
 #               Examples: http://localhost
-#                         https://n7six.hamclock.app
+#                         http://n7six-hamclock.duckdns.org
 #                         http://192.168.1.50:8080
 #   -o OUTPUT   Output path for sidecar JSON
 #               (default: /opt/hamclock-backend/htdocs/ham/HamClock/dynamic_status.json)
@@ -55,7 +55,7 @@
 #   */30 * * * * /opt/hamclock-backend/scripts/probe_dynamic_endpoints.sh
 #
 #   # Local dev — test against remote OHB, write next to script:
-#   ./probe_dynamic_endpoints.sh -h https://n7six.hamclock.app -o ./dynamic_status.json
+#   ./probe_dynamic_endpoints.sh -h http://n7six-hamclock.duckdns.org -o ./dynamic_status.json
 
 set -u
 
