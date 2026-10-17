@@ -25,7 +25,15 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 
 ABI="${1:-arm64-v8a}"
-API="17"                                  # minSdk (Android 4.2)
+# NDK r26 floors at API 21 for 64-bit / 19 for 32-bit; the Gradle minSdk stays
+# 17 so one APK installs on 4.2.2 (old 32-bit tablets run armeabi-v7a).
+# Per-ABI floor keeps the compiler pointed at an existing sysroot.
+case "$ABI" in
+  arm64-v8a|x86_64)   MIN_API=21 ;;
+  armeabi-v7a|x86)    MIN_API=19 ;;
+  *) echo "Unknown ABI: $ABI"; exit 1 ;;
+esac
+API="$MIN_API"                        # effective NDK target for this ABI
 RES="1600x960"                            # clock resolution
 
 : "${ANDROID_NDK_HOME:?Set ANDROID_NDK_HOME to your Android NDK root}"

@@ -15,7 +15,10 @@
 [CmdletBinding()]
 param(
     [string]$Abi  = 'arm64-v8a',
-    [string]$Api  = '24',
+    # NDK r26 floors at API 21 for 64-bit / 19 for 32-bit; request 17 but clamp
+    # to the NDK floor. The Gradle minSdk stays 17 so one APK still installs on
+    # 4.2.2 (old 32-bit tablets run the armeabi-v7a slice).
+    [string]$Api  = '17',
     [string]$Res  = '1600x960',
     [string]$Repo = 'C:\Users\sebue\Documents\N7SIX\Software\HamClock'
 )
@@ -42,6 +45,10 @@ foreach ($t in @($CLANG,$CLANG_C,$STRIP)) { if (-not (Test-Path $t)) { throw "Mi
 
 # The ABI-specific *-clang++ files are bash/cmd wrappers; on Windows we call the
 # base clang++.exe directly and pass the target + sysroot explicitly.
+# NDK r26 floor: 64-bit needs 21+, 32-bit needs 19+ (armeabi-v7a/x86). Request
+# 17 but clamp so an old requested API can never pick a missing sysroot.
+$MinApi = @{ 'arm64-v8a' = 21; 'x86_64' = 21; 'armeabi-v7a' = 19; 'x86' = 19 }[$Abi]
+if ([int]$Api -lt $MinApi) { $Api = "$MinApi" }
 $TARGET  = "${triple}${Api}"
 $SYSROOT = Join-Path $BIN '..\sysroot'
 $COMMON  = @("--target=$TARGET", "--sysroot=$SYSROOT") -join ' '

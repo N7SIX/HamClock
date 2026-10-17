@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -17,6 +18,8 @@ import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -26,6 +29,9 @@ import android.widget.Button
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -61,6 +67,52 @@ class MainActivity : AppCompatActivity() {
         private const val MIN_TIME_MS = 5 * 60 * 1000L
         // REST endpoint for updating the default DE
         private const val SET_NEWDE = "http://127.0.0.1:$REST_PORT/set_newde"
+
+        // Injected into live.html after load. Two jobs:
+        //  1) Forces #hamclock-cvs to cover the entire viewport. live.html's own
+        //     initCanvas() "shrinks to fit preserving aspect" and centers the
+        //     canvas, which leaves letterbox rows on tablets whose aspect ratio
+        //     differs from the clock's 5:3 (1600x960). The stylesheet's
+        //     !important beats the page's inline width/height/position no matter
+        //     when the first frame arrives.
+        //  2) Overrides getAppCoords() so pointer events are mapped against the
+        //     STRETCHED canvas rect with independent X/Y scales (native app
+        //     coords are always 800x480) -- otherwise taps drift and the strip
+        //     below the clock maps to out-of-range coords.
+        private val FILL_JS = """
+            (function fillN7six() {
+              try {
+                try {
+                  var vp = document.querySelector('meta[name=viewport]');
+                  if (!vp) {
+                    vp = document.createElement('meta');
+                    vp.name = 'viewport';
+                    (document.head || document.documentElement).appendChild(vp);
+                  }
+                  vp.content = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+                } catch (e0) { }
+                var el0 = document.getElementById('hamclock-cvs');
+                if (!el0) { setTimeout(fillN7six, 300); return; }
+                if (!document.getElementById('n7six-fill')) {
+                  var st = document.createElement('style');
+                  st.id = 'n7six-fill';
+                  st.textContent =
+                    'html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;overflow:hidden!important;background:#000!important;}' +
+                    '#hamclock-cvs{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;' +
+                    'margin:0!important;padding:0!important;width:100vw!important;height:100vh!important;object-fit:fill!important;background:#000!important;}';
+                  (document.head || document.documentElement).appendChild(st);
+                }
+                window.getAppCoords = function (event) {
+                  var el = document.getElementById('hamclock-cvs');
+                  if (!el) return undefined;
+                  var r = el.getBoundingClientRect();
+                  if (!r.width || !r.height) return undefined;
+                  return { x: Math.round((event.clientX - r.left) * 800 / r.width),
+                           y: Math.round((event.clientY - r.top) * 480 / r.height) };
+                };
+              } catch (e) { }
+            })();
+        """
     }
 
     private var serverProc: Process? = null
@@ -85,8 +137,29 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         requestLocationPermissionIfNeeded()
         loadLastKnownPush()
+        // Edge-to-edge must be requested before the first layout pass so the
+        // content view is never measured with system-bar insets (the rows
+        // visible at the top/bottom of the tablet).
+        // (WindowCompat is API 20+; only touch it on 21+ via the isolated
+        // ModernKiosk helper so 4.x Dalvik never verifies those references.
+        // 4.x relies on the fullscreen flags in applyKioskWindow() instead.)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try { ModernKioskPreLayout.apply(window) } catch (_: Exception) { }
+        }
         val root = FrameLayout(this)
+        root.setFitsSystemWindows(false)
         val web = WebView(this)
+        web.setFitsSystemWindows(false)
+        // The WebView itself must never be inset by system bars: consume the
+        // insets at the parent so legacy fitSystemWindows padding never leaves
+        // the top/bottom rows you see on the tablet.
+        // (setOnApplyWindowInsetsListener is API 20+; 4.x uses
+        // fitSystemWindows padding, which we already disabled above, so skip.
+        // The listener is installed via a separate helper object so Dalvik on
+        // 4.x never verifies WindowInsets references inside onCreate.)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH) {
+            LegacyInsets.install(root)
+        }
         root.addView(
             web,
             FrameLayout.LayoutParams(
@@ -96,79 +169,76 @@ class MainActivity : AppCompatActivity() {
         )
         setContentView(root)
 
+        root.keepScreenOn = true
+        web.keepScreenOn = true
+
+        // ---- Kiosk display window: edge-to-edge + always-on screen ----
+        applyKioskWindow()
+
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
-        web.settings.mediaPlaybackRequiresUserGesture = false
+        // mediaPlaybackRequiresUserGesture is API 17+: safe (minSdk is 17), but
+        // guard anyway so a backport/older stub can never NoSuchMethodError.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            try { web.settings.mediaPlaybackRequiresUserGesture = false } catch (_: Exception) { }
+        }
         // The live web UI receives "open <url>" over its websocket (staged by the
         // native side when the user taps a link such as "Open Guide") and calls
         // window.open() from that async message handler -- not a user-gesture
         // context, so WebView popup gating would silently block it by default.
         web.settings.javaScriptCanOpenWindowsAutomatically = true
         web.settings.setSupportMultipleWindows(true)
-        web.settings.loadWithOverviewMode = true
+        // loadWithOverviewMode=false: overview mode zooms out to a wide
+        // viewport so 100vw no longer equals the LCD width (letterbox rows).
+        // The injected viewport meta + 100vw/100vh CSS then maps 1:1 to glass.
+        web.settings.loadWithOverviewMode = false
         web.settings.useWideViewPort = true
+        web.settings.setSupportZoom(false)
+        web.settings.builtInZoomControls = false
+        web.settings.displayZoomControls = false
+        web.isVerticalScrollBarEnabled = false
+        web.isHorizontalScrollBarEnabled = false
+        web.overScrollMode = View.OVER_SCROLL_NEVER
+        web.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
         // Keep the clock UI itself inside this WebView; route ALL other pages
         // (QR "Open Movie" links, window.open popups, link taps) to the
         // overlay viewer with its X close button instead.
-        web.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val u = request.url.toString()
-                Log.d(TAG, "shouldOverrideUrlLoading: $u (local=${isLocalHamClockUrl(u)})")
-                // Same-host pages (the clock) stay in place. Anything else is
-                // remote content the user asked to see -- show it in the
-                // overlay so they can X back out to the clock.
-                return if (isLocalHamClockUrl(u)) {
-                    false
-                } else {
-                    openExternalInOverlay(u)
-                    true
-                }
-            }
-
-            override fun onPageFinished(view: WebView, url: String) {
-                super.onPageFinished(view, url)
-                if (!serverReady) {
-                    serverReady = true
-                }
-            }
-
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                val u = request.url.toString()
-                return if (u.startsWith("http://127.0.0.1:$RW_PORT/")) {
-                    try {
-                        val conn = (URL(u).openConnection() as HttpURLConnection).apply {
-                            requestMethod = "GET"
-                            connectTimeout = 3000
-                            readTimeout = 5000
-                        }
-                        val ct = conn.contentType ?: "text/html"
-                        WebResourceResponse(
-                            ct.substringBefore(';'), "UTF-8", conn.inputStream
-                        )
-                    } catch (e: Exception) {
-                        Log.w(TAG, "proxy $u failed: ${e.message}")
-                        null
-                    }
-                } else null
-            }
+        // Compat split: API 21+ gets the full WebResourceRequest overrides,
+        // API 17-20 gets only the legacy String overloads (Dalvik verifies
+        // every override signature at class-load, so a single client class
+        // mixing both would fail verification on 4.x).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            web.webViewClient = ModernMainClient()
+        } else {
+            web.webViewClient = LegacyMainClient()
         }
 
         // Intercept window.open() popups (e.g. "Open Movie" links) and route
         // them to the overlay viewer instead of being blocked.
         web.webChromeClient = object : WebChromeClient() {
+            override fun onProgressChanged(view: WebView, newProgress: Int) {
+                super.onProgressChanged(view, newProgress)
+                // live.html sizes its canvas on the first frame, which can
+                // arrive after onPageFinished -- re-assert fill at 100%.
+                if (newProgress == 100) {
+                    try {
+                        val u = view.url ?: return
+                        if (isLocalHamClockUrl(u)) runFillJs(view)
+                    } catch (_: Exception) { }
+                }
+            }
+
             override fun onCreateWindow(
                 view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message
             ): Boolean {
                 Log.d(TAG, "onCreateWindow: dialog=$isDialog userGesture=$isUserGesture")
                 val temp = WebView(this@MainActivity).apply {
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
-                            val u = request.url.toString()
-                            Log.d(TAG, "popup shouldOverrideUrlLoading: $u")
-                            openExternalInOverlay(u)
-                            (v.parent as? ViewGroup)?.removeView(v)
-                            return true
-                        }
+                    // Same verifier split as the main client: only hand 4.x the
+                    // legacy String overload.
+                    webViewClient = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        ModernPopupClient()
+                    } else {
+                        LegacyPopupClient()
                     }
                 }
                 val transport = temp.WebViewTransport()
@@ -304,41 +374,27 @@ class MainActivity : AppCompatActivity() {
         movieView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.mediaPlaybackRequiresUserGesture = false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                try { settings.mediaPlaybackRequiresUserGesture = false } catch (_: Exception) { }
+            }
             settings.setSupportMultipleWindows(true)
             settings.loadWithOverviewMode = true
             settings.useWideViewPort = true
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(
-                    view: WebView, request: WebResourceRequest
-                ): Boolean {
-                    // Inside the overlay, same-host pages (the clock) close it
-                    val u = request.url.toString()
-                    return if (isLocalHamClockUrl(u)) {
-                        dismissOverlay()
-                        true
-                    } else {
-                        view.loadUrl(u)
-                        true
-                    }
-                }
+            // Same verifier split as the main client.
+            webViewClient = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                ModernOverlayClient()
+            } else {
+                LegacyOverlayClient()
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onCreateWindow(
                     view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message
                 ): Boolean {
                     val temp = WebView(this@MainActivity).apply {
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
-                                val u = request.url.toString()
-                                if (isLocalHamClockUrl(u)) {
-                                    dismissOverlay()
-                                } else {
-                                    openExternalInOverlay(u)
-                                }
-                                (v.parent as? ViewGroup)?.removeView(v)
-                                return true
-                            }
+                        webViewClient = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            ModernOverlayPopupClient()
+                        } else {
+                            LegacyOverlayPopupClient()
                         }
                     }
                     val transport = temp.WebViewTransport()
@@ -367,11 +423,174 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ---- Verifier-safe WebView clients (Dalvik on API 17-19 rejects any class
+    // whose method signatures reference WebResourceRequest, so modern and
+    // legacy variants must live in separate inner classes and only the right
+    // one is ever instantiated behind an SDK_INT guard) ----
+
+    /** API 21+: full-featured main-clock client. */
+    private inner class ModernMainClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            return handleMainUrl(view, request.url.toString())
+        }
+
+        override fun onPageFinished(view: WebView, url: String) {
+            super.onPageFinished(view, url)
+            if (!serverReady) serverReady = true
+            if (isLocalHamClockUrl(url)) runFillJs(view)
+        }
+
+        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+            return proxyLocalRequest(request.url.toString())
+        }
+    }
+
+    /** API 17-20: legacy String overloads only (no WebResourceRequest refs). */
+    private inner class LegacyMainClient : WebViewClient() {
+        @Suppress("DEPRECATION")
+        override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+            return handleMainUrl(view, url)
+        }
+
+        override fun onPageFinished(view: WebView, url: String) {
+            super.onPageFinished(view, url)
+            if (!serverReady) serverReady = true
+            if (isLocalHamClockUrl(url)) runFillJs(view)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
+            return proxyLocalRequest(url)
+        }
+    }
+
+    /** API 21+: popup client for window.open() from the main WebView. */
+    private inner class ModernPopupClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
+            return handlePopupUrl(v, request.url.toString())
+        }
+    }
+
+    /** API 17-20: legacy popup client. */
+    private inner class LegacyPopupClient : WebViewClient() {
+        @Suppress("DEPRECATION")
+        override fun shouldOverrideUrlLoading(v: WebView, url: String): Boolean {
+            return handlePopupUrl(v, url)
+        }
+    }
+
+    /** API 21+: overlay client (external pages + clock-dismiss). */
+    private inner class ModernOverlayClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            return handleOverlayUrl(view, request.url.toString())
+        }
+    }
+
+    /** API 17-20: legacy overlay client. */
+    private inner class LegacyOverlayClient : WebViewClient() {
+        @Suppress("DEPRECATION")
+        override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+            return handleOverlayUrl(view, url)
+        }
+    }
+
+    /** API 21+: overlay-popup client. */
+    private inner class ModernOverlayPopupClient : WebViewClient() {
+        override fun shouldOverrideUrlLoading(v: WebView, request: WebResourceRequest): Boolean {
+            val u = request.url.toString()
+            if (isLocalHamClockUrl(u)) dismissOverlay() else openExternalInOverlay(u)
+            (v.parent as? ViewGroup)?.removeView(v)
+            return true
+        }
+    }
+
+    /** API 17-20: legacy overlay-popup client. */
+    private inner class LegacyOverlayPopupClient : WebViewClient() {
+        @Suppress("DEPRECATION")
+        override fun shouldOverrideUrlLoading(v: WebView, url: String): Boolean {
+            if (isLocalHamClockUrl(url)) dismissOverlay() else openExternalInOverlay(url)
+            (v.parent as? ViewGroup)?.removeView(v)
+            return true
+        }
+    }
+
     /** True if `url` is served by the local HamClock server (keep in the main WebView). */
     private fun isLocalHamClockUrl(url: String): Boolean {
         return url.startsWith("http://127.0.0.1:$REST_PORT/") ||
                url.startsWith("http://127.0.0.1:$RW_PORT/")    ||
                url.startsWith("http://127.0.0.1:8082/")
+    }
+
+    /**
+     * Shared link router used by BOTH main-WebView shouldOverrideUrlLoading
+     * overloads: the clock stays in place, everything else goes to the overlay
+     * viewer (with its X close button) so the user can get back to the clock.
+     */
+    private fun handleMainUrl(view: WebView, u: String): Boolean {
+        Log.d(TAG, "shouldOverrideUrlLoading: $u (local=${isLocalHamClockUrl(u)})")
+        return if (isLocalHamClockUrl(u)) {
+            false
+        } else {
+            openExternalInOverlay(u)
+            true
+        }
+    }
+
+    /** Shared popup router used by BOTH onCreateWindow temp-WebView overloads. */
+    private fun handlePopupUrl(v: WebView, u: String): Boolean {
+        Log.d(TAG, "popup shouldOverrideUrlLoading: $u")
+        openExternalInOverlay(u)
+        (v.parent as? ViewGroup)?.removeView(v)
+        return true
+    }
+
+    /**
+     * Shared overlay router: same-host pages (the clock) dismiss the overlay,
+     * everything else stays inside it (4.x-safe view.loadUrl, no JS bridge).
+     */
+    private fun handleOverlayUrl(view: WebView, u: String): Boolean {
+        return if (isLocalHamClockUrl(u)) {
+            dismissOverlay()
+            true
+        } else {
+            @Suppress("DEPRECATION") view.loadUrl(u)
+            true
+        }
+    }
+
+    /** Shared localhost proxy used by BOTH shouldInterceptRequest overloads. */
+    private fun proxyLocalRequest(u: String): WebResourceResponse? {
+        return if (u.startsWith("http://127.0.0.1:$RW_PORT/")) {
+            try {
+                val conn = (URL(u).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 3000
+                    readTimeout = 5000
+                }
+                val ct = conn.contentType ?: "text/html"
+                WebResourceResponse(
+                    ct.substringBefore(';'), "UTF-8", conn.inputStream
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "proxy $u failed: ${e.message}")
+                null
+            }
+        } else null
+    }
+
+    /**
+     * Run FILL_JS on every WebView. evaluateJavascript() is API 19+; on 17/18
+     * fall back to loadUrl("javascript:...") (runs async, no result needed).
+     */
+    private fun runFillJs(view: WebView) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                view.evaluateJavascript(FILL_JS, null)
+            } else {
+                @Suppress("DEPRECATION")
+                view.loadUrl("javascript:" + Uri.encode(FILL_JS))
+            }
+        } catch (_: Exception) { }
     }
 
     /**
@@ -451,12 +670,21 @@ class MainActivity : AppCompatActivity() {
             Log.w(TAG, "getLastKnownLocation failed", e)
         }
 
-        // Request continuous GPS updates
+        // Request continuous GPS updates.
+        // The 5-arg Looper overload is API 24+; on 17-23 use the 4-arg variant
+        // (delivers on the calling thread -- we post to UI via uiPost anyway).
         try {
-            locationManager!!.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER, MIN_TIME_MS, MIN_DIST_M, gpsListener!!,
-                Looper.getMainLooper()
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                locationManager!!.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, MIN_TIME_MS, MIN_DIST_M, gpsListener!!,
+                    Looper.getMainLooper()
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                locationManager!!.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, MIN_TIME_MS, MIN_DIST_M, gpsListener!!
+                )
+            }
             Log.i(TAG, "GPS follow started (GPS_PROVIDER)")
         } catch (e: SecurityException) {
             Log.e(TAG, "GPS permission not granted", e)
@@ -550,8 +778,139 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    /**
+     * Kiosk display window: full-bleed edge-to-edge + always-on screen.
+     * - Draws behind status/nav bars and hides them (immersive sticky; a
+     *   swipe peeks them transiently) so HamClock covers the entire LCD.
+     * - FLAG_KEEP_SCREEN_ON stops dim / screensaver / LCD sleep while this
+     *   activity is visible (no permission needed; auto-cleared on pause).
+     * - showWhenLocked/turnScreenOn keeps the clock up over the lockscreen.
+     * Must be re-applied in onResume/onWindowFocusChanged because the system
+     * clears immersive flags whenever another window takes focus.
+     */
+    private fun applyKioskWindow() {
+        // Modern edge-to-edge touches API 30+ classes; on 4.x the mere
+        // reference can fail verification, so only call it on 21+ (the helper
+        // object below keeps those references out of MainActivity's own
+        // verified method bodies).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ModernKiosk.apply(window)
+        }
+        // Ignore screen dimming, screensaver, and LCD sleep while HamClock
+        // is showing: stops the system idle timer for this window.
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        // Show over the lockscreen + wake the screen if it was off.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            try {
+                setShowWhenLocked(true)
+                setTurnScreenOn(true)
+            } catch (_: Exception) { }
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
+        // Immersive sticky exists since API 19; 17/18 fall back to plain
+        // fullscreen flags (constants are inlined so no verification risk).
+        @Suppress("DEPRECATION")
+        try {
+            var flags = (
+                View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                flags = flags or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            }
+            window.decorView.systemUiVisibility = flags
+        } catch (_: Exception) { }
+    }
+
+    /**
+     * API 21+ pre-layout edge-to-edge request (isolated so onCreate itself
+     * carries no WindowCompat references for 4.x Dalvik to verify).
+     */
+    private object ModernKioskPreLayout {
+        fun apply(window: android.view.Window) {
+            try { WindowCompat.setDecorFitsSystemWindows(window, false) } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * API 21+ only: edge-to-edge + bar colors + InsetsController. Lives in its
+     * own nested object (never called on 4.x) so Dalvik on API 17-19 never
+     * verifies these API 21-30 class/method references.
+     */
+    private object ModernKiosk {
+        fun apply(window: android.view.Window) {
+            try {
+                WindowCompat.setDecorFitsSystemWindows(window, false)
+            } catch (_: Exception) { }
+            try {
+                window.statusBarColor = Color.BLACK
+                window.navigationBarColor = Color.BLACK
+            } catch (_: Exception) { }
+            // Draw into the display-cutout (notch/camera) area on API 28+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    window.attributes = window.attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    }
+                } catch (_: Exception) { }
+            }
+            // Hide status + navigation bars (compat wrapper handles API 21-29).
+            try {
+                WindowInsetsControllerCompat(window, window.decorView).apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyKioskWindow()
+    }
+
+    /**
+     * Re-enter immersive mode whenever we regain focus (returning from the
+     * system browser or the overlay viewer, dismissing a dialog, ...): the
+     * system may un-hide the bars while another window has focus.
+     */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            applyKioskWindow()
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         try { serverProc?.destroy() } catch (e: Exception) { }
+    }
+
+    /**
+     * API 20+ only: consumes window insets so legacy fitSystemWindows padding
+     * never leaves top/bottom rows. Lives in its own nested object so Dalvik on
+     * API 17-19 never verifies WindowInsets references (verifier checks the
+     * referencing method's whole class at load; isolating keeps MainActivity
+     * itself clean). Only called behind an SDK_INT guard in onCreate.
+     */
+    private object LegacyInsets {
+        fun install(root: FrameLayout) {
+            try {
+                root.setOnApplyWindowInsetsListener { v, insets ->
+                    v.setPadding(0, 0, 0, 0)
+                    WindowInsets.CONSUMED
+                }
+            } catch (_: Exception) { }
+        }
     }
 }
