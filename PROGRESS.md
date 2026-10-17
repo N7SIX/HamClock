@@ -15,7 +15,7 @@ This project is the definitive open-source installer, multi-platform packaging s
 - **Android via Termux (`termux/install.sh`)**: Low-power (<3W) touch clock display using Termux + Fully Kiosk Browser.
 - **Windows (`scripts/install.ps1`)**: Windows 10/11 with WSLg GUI window or Docker Desktop.
 - **Native Windows Executable (MinGW-w64 cross-compile)**: Statically linked PE32+ `.exe` running the `_WEB_ONLY` backend natively on Windows 10/11 without WSL, Docker, or X11. Built from Linux with `make mingw-all-web`.
-- **Docker Multi-Arch Container (`ghcr.io/9m2pju/9m2pju-hamclock-docker:latest`)**: `linux/amd64`, `linux/arm64`, `linux/arm/v7`.
+- **Docker Multi-Arch Container (`ghcr.io/n7six/hamclock:latest`)**: `linux/amd64`, `linux/arm64`, `linux/arm/v7`.
 - **Arch User Repository (`hamclock-git`)**: Native AUR package on `aur.archlinux.org`.
 - **Pre-Built Linux Packages**: Multi-arch `.deb`, `.rpm`, `.AppImage` on GitHub Releases.
 - **App Store Submissions**:

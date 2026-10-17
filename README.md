@@ -10,7 +10,7 @@
 [![Snap Store](https://img.shields.io/badge/Snap%20Store-Stable-E95420.svg?style=for-the-badge&logo=snapcraft&logoColor=white)](https://snapcraft.io/hamclock)
 [![Windows Support](https://img.shields.io/badge/Windows-Native%20.exe%20%7C%20WSL2%20%7C%20Docker-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](docs/WINDOWS.md)
 [![Android Support](https://img.shields.io/badge/Android-APK%20App%20%7C%20Termux-3DDC84.svg?style=for-the-badge&logo=android&logoColor=white)](docs/ANDROID.md)
-[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2F9m2pju%2F9m2pju--hamclock--docker-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/pkgs/container/9m2pju-hamclock-docker)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io%2Fn7six%2Fhamclock-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/N7SIX/HamClock/pkgs/container/hamclock)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_a_Coffee-9M2PJU-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/9m2pju)
 [![Wise](https://img.shields.io/badge/Wise-faizulz13-163300?style=for-the-badge&logo=wise&logoColor=white)](https://wise.com/pay/me/faizulz13)
 [![License](https://img.shields.io/badge/license-MIT-purple.svg?style=for-the-badge)](file:///home/x/ESPHamClock/LICENSE)
@@ -406,7 +406,7 @@ RESOLUTION=1600x960 curl -fsSL https://raw.githubusercontent.com/9M2PJU/9M2PJU-H
    ```yaml
    services:
      hamclock:
-       image: ghcr.io/9m2pju/9m2pju-hamclock-docker:latest
+       image: ghcr.io/n7six/hamclock:latest
        container_name: hamclock
        restart: unless-stopped
        ports:
@@ -443,7 +443,7 @@ docker run -d \
   -p 8082:8082 \
   -e RESOLUTION=1600x960 \
   -v hamclock_data:/home/hamclock/.hamclock \
-  ghcr.io/9m2pju/9m2pju-hamclock-docker:latest
+  ghcr.io/n7six/hamclock:latest
 ```
 
 ---
