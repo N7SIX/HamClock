@@ -15,7 +15,7 @@
  *
  *   - android_request_exit()    -> terminate the process cleanly.
  *   - android_request_restart() -> re-exec ourselves (optionally dropping -K).
- *   - android_open_url()        -> no-op (the WebView launcher opens links).
+ *   - android_open_url()        -> launch the browser via "am start" ACTION_VIEW (see below).
  *   - android_get_clipboard()   -> return false (WebView handles paste in JS).
  * ---------------------------------------------------------------------------
  */
@@ -57,11 +57,39 @@ void android_request_restart(bool minus_K)
     _exit(0);
 }
 
-/* No standalone browser intent available; the WebView launcher intercepts
- * external links, so this is intentionally a no-op. */
+/* Open url with the device's browser or other handler app. We run as a plain
+ * child process with no JNI/Activity host, so go through the am command-line
+ * tool, which issues ACTION_VIEW under our own app identity -- launching a
+ * browser for a VIEW intent is a normal, caller-permission-free activity start.
+ * This is the fallback for touches not classified as Live Web (keyboard,
+ * future native UI); Live Web sessions go through openLiveWebURL() instead and
+ * the WebView shows the page itself.
+ */
 void android_open_url(const char *url)
 {
-    (void)url;
+    if (!url || !*url)
+        return;
+
+    /* single-quote the url for sh; escape any embedded single quote by ending
+     * the quoted span, emitting an escaped quote, and reopening it */
+    char quoted[1100];
+    size_t q = 0;
+    for (const char *p = url; *p && q < sizeof(quoted) - 4; p++) {
+        if (*p == '\'') {
+            quoted[q++] = '\''; quoted[q++] = '\\';
+            quoted[q++] = '\''; quoted[q++] = '\'';
+        } else {
+            quoted[q++] = *p;
+        }
+    }
+    quoted[q] = '\0';
+
+    char cmd[sizeof(quoted) + 100];
+    snprintf (cmd, sizeof(cmd),
+              "/system/bin/am start -a android.intent.action.VIEW -d '%s' >/dev/null 2>&1",
+              quoted);
+    int rc = system (cmd);
+    printf ("android_open_url: rc=%d url=%s\n", rc, url);
 }
 
 /* Clipboard is managed by the Android WebView (navigator.clipboard in

@@ -3,10 +3,12 @@ package my.hamradio.n7six.hamclock
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
@@ -97,6 +99,11 @@ class MainActivity : AppCompatActivity() {
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
         web.settings.mediaPlaybackRequiresUserGesture = false
+        // The live web UI receives "open <url>" over its websocket (staged by the
+        // native side when the user taps a link such as "Open Guide") and calls
+        // window.open() from that async message handler -- not a user-gesture
+        // context, so WebView popup gating would silently block it by default.
+        web.settings.javaScriptCanOpenWindowsAutomatically = true
         web.settings.setSupportMultipleWindows(true)
         web.settings.loadWithOverviewMode = true
         web.settings.useWideViewPort = true
@@ -253,6 +260,20 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "openExternalInOverlay: $url (movieRoot!=null=${movieRoot != null})")
         // Do nothing if an overlay is already showing
         if (movieRoot != null) return
+
+        // WebViews cannot render PDFs (no built-in plugin), so the User Guide and
+        // other .pdf links would come up as a blank overlay. Hand them to the
+        // system browser / PDF viewer via ACTION_VIEW instead -- the same
+        // destination a scanned QR code reaches. Fall back to the overlay if no
+        // activity on this device claims the URL.
+        if (url.substringBefore('?').endsWith(".pdf", ignoreCase = true)) {
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                return
+            } catch (e: Exception) {
+                Log.w(TAG, "no PDF viewer for $url, falling back to overlay: $e")
+            }
+        }
 
         // Build the overlay container
         movieRoot = FrameLayout(this).apply {
