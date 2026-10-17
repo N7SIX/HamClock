@@ -1,0 +1,1292 @@
+#!/bin/bash
+# ============================================================
+#
+#   ██████╗ ██╗  ██╗██████╗
+#  ██╔═══██╗██║  ██║██╔══██╗
+#  ██║   ██║███████║██████╔╝
+#  ██║   ██║██╔══██║██╔══██╗
+#  ╚██████╔╝██║  ██║██████╔╝
+#   ╚═════╝ ╚═╝  ╚═╝╚═════╝
+#
+#  Open HamClock Backend
+#  generate_status_json.sh
+#
+#  Copyright (C) 2026 Open HamClock Backend (OHB) Contributors
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# ============================================================
+#
+# generate_status_json.sh
+# Generates a static status board HTML + JSON for HamClock data products & maps.
+# Run via cron every 5–15 minutes, e.g.:
+#   */5 * * * * /opt/hamclock-backend/generate_status_json.sh
+#
+# Reads dynamic_status.json (sidecar) produced by probe_dynamic_endpoints.sh,
+# which should run on its own cron every 30 minutes.
+
+# ── Shell Options ───────────────────────────────────────────────────────────
+shopt -s extglob
+
+# ── Config ──────────────────────────────────────────────────────────────────
+# Load external thresholds
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" # Ensure SCRIPT_DIR is set
+STATUS_SETTINGS_CONF="${SCRIPT_DIR}/status_settings.conf"
+
+# Provide default thresholds if the config file is missing or values are not set
+THRESH_BZ_ONTA_WX="${THRESH_BZ_ONTA_WX:-300 600 1800}"
+THRESH_DRAP_WIND="${THRESH_DRAP_WIND:-600 1200 3600}"
+THRESH_XRAY="${THRESH_XRAY:-360 720 3600}"
+THRESH_PROTON="${THRESH_PROTON:-360 720 3600}"
+THRESH_AURORA="${THRESH_AURORA:-1800 3600 7200}"
+THRESH_SDO_SPACE="${THRESH_SDO_SPACE:-3600 7200 14400}"
+THRESH_SSN="${THRESH_SSN:-7200 14400 28800}" # 2h 4h 8h
+THRESH_SSN_HISTORY="${THRESH_SSN_HISTORY:-86400 172800 259200}" # 1d 2d 3d
+THRESH_ESATS="${THRESH_ESATS:-3600 7200 14400}"
+THRESH_ESATS_FREQ="${THRESH_ESATS_FREQ:-90000 144000 180000}" # 25h 40h 50h
+THRESH_CONTESTS="${THRESH_CONTESTS:-86400 172800 259200}" # 1d 2d 3d
+THRESH_CTY_DX="${THRESH_CTY_DX:-2592000 5184000 7776000}" # 30d 60d 90d
+THRESH_MAP="${THRESH_MAP:-3600 7200 14400}"
+THRESH_MUF_RT="${THRESH_MUF_RT:-2700 5400 10800}"
+THRESH_ACTIVENETS="${THRESH_ACTIVENETS:-300 600 1800}" # 5m 10m 30m
+THRESH_CLOUDS="${THRESH_CLOUDS:-3600 7200 14400}"
+THRESH_TROPO="${THRESH_TROPO:-12600 23400 43200}"
+THRESH_LAUNCHES="${THRESH_LAUNCHES:-1200 2400 3600}"
+THRESH_WX_MAP="${THRESH_WX_MAP:-3600 7200 14400}"
+THRESH_SOLAR_HISTORY="${THRESH_SOLAR_HISTORY:-2592000 5184000 7776000}" # 30d 60d 90d
+THRESH_IOTA="${THRESH_IOTA:-90000 108000 172800}" # 25h 30h 48h
+THRESH_BALLOONS="${THRESH_BALLOONS:-300 600 1800}" # 5m 10m 30m
+THRESH_PICO="${THRESH_PICO:-2700 5400 10800}"      # 45m 90m 3h
+THRESH_BAND_ACTIVITY="${THRESH_BAND_ACTIVITY:-2100 3900 10800}" # 35m 65m 3h
+THRESH_POTA_SCHEDULED="${THRESH_POTA_SCHEDULED:-2100 3900 10800}" # 35m 65m 3h
+THRESH_MARINE="${THRESH_MARINE:-360 720 1800}"        # 6m 12m 30m
+THRESH_FIRES="${THRESH_FIRES:-1200 2400 3600}"        # 20m 40m 1h
+THRESH_FIREWX="${THRESH_FIREWX:-360 720 1800}"        # 6m 12m 30m
+THRESH_QUAKES="${THRESH_QUAKES:-2100 3900 10800}"     # 35m 65m 3h
+THRESH_HAMQSL="${THRESH_HAMQSL:-720 1800 3600}"       # 12m 30m 1h
+THRESH_STORMS="${THRESH_STORMS:-25200 43200 86400}"   # 7h 12h 24h
+THRESH_DEFAULT="${THRESH_DEFAULT:-3600 7200 14400}"
+IGNORE_FILES="${IGNORE_FILES:-"ONTA/spot.pl hab_state.json pico_state.json"}"
+
+if [ -r "$STATUS_SETTINGS_CONF" ]; then
+    source "$STATUS_SETTINGS_CONF"
+else
+    echo "WARNING: status_settings.conf not found or not readable. Using default thresholds." >&2
+fi
+
+DATA_DIR="${DATA_DIR:-/opt/hamclock-backend/htdocs/ham/HamClock}"
+MAPS_DIR="${MAPS_DIR:-/opt/hamclock-backend/htdocs/ham/HamClock/maps}"
+SDO_DIR="${SDO_DIR:-/opt/hamclock-backend/htdocs/ham/HamClock/SDO}"
+CACHE_DIR="${CACHE_DIR:-/opt/hamclock-backend/cache}"
+
+# Determine the central mirror host
+MIRROR_HOST="${MIRROR:-n7six-hamclock.duckdns.org}"
+
+OUTPUT="${OUTPUT:-/opt/hamclock-backend/htdocs/ham/HamClock/status.html}"
+OUTPUT_JSON="${OUTPUT_JSON:-${OUTPUT%.html}.json}"
+DYNAMIC_SIDECAR="${DYNAMIC_SIDECAR:-/opt/hamclock-backend/htdocs/ham/HamClock/dynamic_status.json}"
+NODE_EXPORTER_URL="${HAMCLOCK_NODE_EXPORTER_URL:-http://node-exporter:9100/metrics}"
+PROMETHEUS_URL="${HAMCLOCK_PROMETHEUS_URL:-http://prometheus:9090/api/v1/query}"
+QUERY_TIMEOUT="${HAMCLOCK_QUERY_TIMEOUT:-15}"
+UA="${HAMCLOCK_UA:-OHB-generate/1.0}"
+CALLSIGN="OHB" # your station callsign
+VERSION=$(cat /opt/hamclock-backend/git.version 2>/dev/null | cut -b -12)
+VERSION="${VERSION:-unknown}" # Provide a default if git.version is missing or empty
+TZ_LABEL="UTC"          # display timezone label
+
+PUBLIC_IP=$(dig +short TXT o-o.myaddr.l.google.com @ns1.google.com | tr -d '"' || echo "unknown")
+
+# Named data product subdirectories to enumerate (order preserved in output).
+# RSS is intentionally omitted (probed dynamically). SDO has its own section.
+DATA_SUBDIRS=(
+    Bz
+    NOAASpaceWX
+    ONTA
+    activenets
+    aurora
+    balloons
+    contests
+    cty
+    drap
+    dst
+    dxpeds
+    esats
+    fires
+    firewx
+    geomag
+    hamqsl
+    launches
+    marine
+    proton
+    quakes
+    solar-flux
+    solar-wind
+    ssn
+    storms
+    worldwx
+    xray
+)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Per-category/file thresholds (seconds) ──────────────────────────────────
+get_thresholds() {
+    local category="$1"
+    local filename="$2"
+
+    # Files that never change — return sentinel
+    case "$filename" in
+        rank_coeffs.txt|rank2_coeffs.txt|solar-flux-history-1945-2025.txt)
+            echo "STATIC"
+            return
+            ;;
+        # regex for cloud maps
+        map-[DN]-*-Clouds.*)
+            echo "$THRESH_CLOUDS"
+            return
+            ;;
+        # map-[D|N]-*-Countries.*, map-[D|N]-*-Terrain*, and map-[D|N]-*-Physical.* are static
+        *(map-[DN]-*-)@(Countries|Terrain|Physical)*)
+            echo "STATIC"
+            return
+            ;;
+        # border/state overlay vector data (build_borders.sh / build_states.sh) --
+        # static, only regenerated when manually deleted, not on a freshness cadence
+        borders.bin|borders.bin.z|states.bin|states.bin.z)
+            echo "STATIC"
+            return
+            ;;
+        map-[DN]-*-MUF-RT.*)
+            echo "$THRESH_MUF_RT"
+            return
+            ;;
+        map-[DN]-*-Tropo.*)
+            echo "$THRESH_TROPO"
+            return
+            ;;
+        map-[DN]-*-Wx-mB.*|map-[DN]-*-Wx-in.*)
+            echo "$THRESH_WX_MAP"
+            return
+            ;;
+        solarflux-history.txt)
+            echo "$THRESH_SOLAR_HISTORY"
+            return
+            ;;
+        ssn-history.txt)
+            echo "$THRESH_SSN_HISTORY"
+            return
+            ;;
+        esats-freq.txt)
+            echo "$THRESH_ESATS_FREQ"
+            return
+            ;;
+        iota.txt)
+            echo "$THRESH_IOTA"
+            return
+            ;;
+        pico.txt)
+            echo "$THRESH_PICO"
+            return
+            ;;
+        band_activity.txt)
+            echo "$THRESH_BAND_ACTIVITY"
+            return
+            ;;
+        pota_scheduled.txt)
+            echo "$THRESH_POTA_SCHEDULED"
+            return
+            ;;
+    esac
+
+    # Per-category thresholds: echo "fresh_sec recent_sec aged_sec"
+    case "$category" in
+        Bz|ONTA|worldwx)                       echo "$THRESH_BZ_ONTA_WX" ;;
+        balloons)                              echo "$THRESH_BALLOONS"   ;;
+        drap|solar-wind)                       echo "$THRESH_DRAP_WIND"  ;;
+        xray)                                  echo "$THRESH_XRAY"       ;;
+        proton)                                echo "$THRESH_PROTON"     ;;
+        aurora)                                echo "$THRESH_AURORA"     ;;
+        NOAASpaceWX|dst|geomag|solar-flux|SDO) echo "$THRESH_SDO_SPACE"  ;;
+        ssn)                                   echo "$THRESH_SSN"        ;;
+        esats)                                 echo "$THRESH_ESATS"      ;;
+        launches)                              echo "$THRESH_LAUNCHES"   ;;
+        activenets)                            echo "$THRESH_ACTIVENETS" ;;
+        contests)                              echo "$THRESH_CONTESTS"   ;;
+        cty|dxpeds)                            echo "$THRESH_CTY_DX"     ;;
+        map)                                   echo "$THRESH_MAP"        ;;
+        marine)                                echo "$THRESH_MARINE"     ;;
+        fires)                                 echo "$THRESH_FIRES"      ;;
+        firewx)                                echo "$THRESH_FIREWX"     ;;
+        quakes)                                echo "$THRESH_QUAKES"     ;;
+        hamqsl)                                echo "$THRESH_HAMQSL"     ;;
+        storms)                                echo "$THRESH_STORMS"     ;;
+        *)                                     echo "$THRESH_DEFAULT"    ;;
+    esac
+}
+
+classify_age() {
+    local age_sec="$1"
+    local thresholds="$2"   # "fresh_sec recent_sec aged_sec" or "STATIC"
+
+    if [ "$thresholds" = "STATIC" ]; then
+        echo "static STATIC"
+        return
+    fi
+
+    read -r t_fresh t_recent t_aged <<< "$thresholds"
+
+    if   [ "$age_sec" -lt "$t_fresh"  ]; then echo "ok FRESH"
+    elif [ "$age_sec" -lt "$t_recent" ]; then echo "warn RECENT"
+    elif [ "$age_sec" -lt "$t_aged"   ]; then echo "aged AGED"
+    else                                      echo "stale STALE"
+    fi
+}
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Stats Aggregation ────────────────────────────────────────────────────────
+DATA_FRESH=0; DATA_RECENT=0; DATA_AGED=0; DATA_STALE=0; DATA_STATIC=0; DATA_TOTAL=0
+SDO_FRESH=0;  SDO_RECENT=0;  SDO_AGED=0;  SDO_STALE=0;  SDO_STATIC=0;  SDO_TOTAL=0
+MAP_FRESH=0;  MAP_RECENT=0;  MAP_AGED=0;  MAP_STALE=0;  MAP_STATIC=0;  MAP_TOTAL=0
+
+# Tracking for first instances in HTML output
+TRACK_DATA_FRESH=0; TRACK_DATA_RECENT=0; TRACK_DATA_AGED=0; TRACK_DATA_STALE=0; TRACK_DATA_STATIC=0
+TRACK_SDO_FRESH=0;  TRACK_SDO_RECENT=0;  TRACK_SDO_AGED=0;  TRACK_SDO_STALE=0;  TRACK_SDO_STATIC=0
+TRACK_MAP_FRESH=0;  TRACK_MAP_RECENT=0;  TRACK_MAP_AGED=0;  TRACK_MAP_STALE=0;  TRACK_MAP_STATIC=0
+
+should_ignore() {
+    local filepath="$1"
+    local label="$2"
+    local filename
+    filename=$(basename "$filepath")
+
+    if [ "$filename" = "ignore" ]; then
+        return 0
+    fi
+
+    local item
+    for item in $IGNORE_FILES; do
+        if [[ "$filename" == $item ]] || [[ "$label/$filename" == $item ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+NOW=$(date -u "+%Y-%m-%d %H:%M:%S")
+NOW_EPOCH=$(date -u +%s)
+
+# ── Remote Alpha Status ─────────────────────────────────────────────────────
+declare -A REMOTE_FILE_MOD=()
+declare -A REMOTE_FILE_STATUS=()
+declare -A REMOTE_FILE_CAT=()
+
+REMOTE_STATUS_SYNCED=0
+REMOTE_STATUS_HOST=""
+if [[ -n "${PROXY_MAPS:-}" && "${PROXY_MAPS}" != "false" ]]; then
+    REMOTE_STATUS_HOST="${PROXY_MAPS}"
+    [[ "$REMOTE_STATUS_HOST" == "true" ]] && REMOTE_STATUS_HOST="$MIRROR_HOST"
+fi
+
+if [[ -n "$REMOTE_STATUS_HOST" ]]; then
+    REMOTE_URL="http://${REMOTE_STATUS_HOST}/ham/HamClock/status.json"
+    # Attempt to fetch with up to 3 retries if data is missing or malformed
+    for i in {1..3}; do
+        REMOTE_JSON=$(curl -sSL --max-time 10 "$REMOTE_URL" 2>/dev/null)
+        if [[ -n "$REMOTE_JSON" ]] && echo "$REMOTE_JSON" | jq -e . >/dev/null 2>&1; then
+            while IFS=$'\t' read -r rfname rcat mtime status; do
+                [[ -n "$rfname" ]] || continue
+                REMOTE_FILE_MOD["$rfname"]="$mtime"
+                REMOTE_FILE_STATUS["$rfname"]="$status"
+                REMOTE_FILE_CAT["$rfname"]="$rcat"
+            done < <(echo "$REMOTE_JSON" | jq -r '.files[] | "\(.filename)\t\(.category)\t\(.modified_utc)\t\(.status)"' 2>/dev/null)
+            REMOTE_STATUS_SYNCED=1
+            break
+        fi
+        [ "$i" -lt 3 ] && sleep 2
+    done
+fi
+
+# ── Dynamic endpoints sidecar ────────────────────────────────────────────────
+# Populated by probe_dynamic_endpoints.sh on its own cron (every 30 min).
+# We read it here and surface ACTIVE/DEGRADED/DOWN in both HTML and JSON.
+# If the sidecar is missing, we degrade gracefully.
+DYN_OVERALL="UNKNOWN"
+DYN_TOTAL=0
+DYN_ACTIVE=0
+DYN_IDLE=0
+DYN_HEALTHY=0
+DYN_EMPTY=0
+DYN_FAILED=0
+DYN_TIMEOUT=0
+# Fetch custom 24h count metrics directly from prometheus (new) and node-exporter (old)
+count_24_new=$(curl -A "$UA" -sS --max-time "$QUERY_TIMEOUT" -G "$PROMETHEUS_URL" \
+      --data-urlencode 'query=count(sum by (serial) (job:nginx_serial:active_24h))' 2>/dev/null \
+        | jq -r '.data.result[0].value[1] // 0')
+count_24_old=$(curl -A "$UA" -sS --max-time "$QUERY_TIMEOUT" "$NODE_EXPORTER_URL" 2>/dev/null | grep "^count_24_hours" | awk '{print $2}')
+if ! [[ "$count_24_new" =~ ^[0-9]+$ ]]; then
+    count_24_new=0
+fi
+if ! [[ "$count_24_old" =~ ^[0-9]+$ ]]; then
+    count_24_old=0
+fi
+DYN_COUNT_24H="$count_24_new"
+
+# Read latest stable version from cache
+STABLE_VERSION=""
+if [ -r "$CACHE_DIR/HC_RELEASE-stable.txt" ]; then
+    STABLE_VERSION=$(head -n 1 "$CACHE_DIR/HC_RELEASE-stable.txt" | tr -d '[:space:]')
+fi
+if [ -z "$STABLE_VERSION" ] && [ -r "$CACHE_DIR/HC_RELEASE-stable.tag" ]; then
+    STABLE_VERSION=$(head -n 1 "$CACHE_DIR/HC_RELEASE-stable.tag" | tr -d '[:space:]' | sed -E 's/^[vV]//')
+fi
+
+count_stable_24=0
+if [ -n "$STABLE_VERSION" ]; then
+    count_stable_24=$(curl -A "$UA" -sS --max-time "$QUERY_TIMEOUT" -G "$PROMETHEUS_URL" \
+        --data-urlencode "query=count(sum by (serial) (count_over_time(nginx_requests_total{version=~\"v?${STABLE_VERSION}\"}[24h]) > 0))" 2>/dev/null \
+        | jq -r '.data.result[0].value[1] // 0')
+fi
+if ! [[ "$count_stable_24" =~ ^[0-9]+$ ]]; then
+    count_stable_24=0
+fi
+DYN_COUNT_STABLE_24H="$count_stable_24"
+if [ -n "$STABLE_VERSION" ]; then
+    STABLE_LABEL="HamClocks on ${STABLE_VERSION} (24h)"
+else
+    STABLE_LABEL="HamClocks on Stable (24h)"
+fi
+
+# Read latest beta version from cache
+BETA_VERSION=""
+if [ -r "$CACHE_DIR/HC_RELEASE-beta.txt" ]; then
+    BETA_VERSION=$(head -n 1 "$CACHE_DIR/HC_RELEASE-beta.txt" | tr -d '[:space:]')
+fi
+if [ -z "$BETA_VERSION" ] && [ -r "$CACHE_DIR/HC_RELEASE-beta.tag" ]; then
+    BETA_VERSION=$(head -n 1 "$CACHE_DIR/HC_RELEASE-beta.tag" | tr -d '[:space:]' | sed -E 's/^[vV]//')
+fi
+
+count_beta_24=0
+if [ -n "$BETA_VERSION" ]; then
+    count_beta_24=$(curl -A "$UA" -sS --max-time "$QUERY_TIMEOUT" -G "$PROMETHEUS_URL" \
+        --data-urlencode "query=count(sum by (serial) (count_over_time(nginx_requests_total{version=~\"v?${BETA_VERSION}\"}[24h]) > 0))" 2>/dev/null \
+        | jq -r '.data.result[0].value[1] // 0')
+fi
+if ! [[ "$count_beta_24" =~ ^[0-9]+$ ]]; then
+    count_beta_24=0
+fi
+DYN_COUNT_BETA_24H="$count_beta_24"
+if [ -n "$BETA_VERSION" ]; then
+    BETA_LABEL="HamClocks on ${BETA_VERSION} (24h)"
+else
+    BETA_LABEL="HamClocks on Beta (24h)"
+fi
+DYN_GENERATED=""
+DYN_AGE_SEC=0
+DYN_AVAILABLE=0
+
+DYNAMIC_SIDECAR_CONTENT=""
+if [ -r "$DYNAMIC_SIDECAR" ]; then
+    # Read content once to avoid multiple file reads
+    DYNAMIC_SIDECAR_CONTENT=$(cat "$DYNAMIC_SIDECAR")
+    # Check if content is non-empty and valid JSON using jq -e
+    if [ -n "$DYNAMIC_SIDECAR_CONTENT" ] && command -v jq >/dev/null 2>&1 && echo "$DYNAMIC_SIDECAR_CONTENT" | jq -e . >/dev/null 2>&1; then
+        DYN_AVAILABLE=1
+        DYN_OVERALL=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.overall // "UNKNOWN"')
+        DYN_TOTAL=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.total // 0')
+        DYN_ACTIVE=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.active // 0')
+        DYN_IDLE=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.idle // 0')
+        DYN_HEALTHY=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.healthy // 0')
+        DYN_EMPTY=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.empty // 0')
+        DYN_FAILED=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.failed // 0')
+        DYN_TIMEOUT=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.summary.timeout // 0')
+        DYN_GENERATED=$(echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '.generated_utc // ""')
+        # Backward-compat: if sidecar predates "healthy" key, fall back to active
+        [ "$DYN_HEALTHY" -eq 0 ] && [ "$DYN_ACTIVE" -gt 0 ] && DYN_HEALTHY="$DYN_ACTIVE"
+        if [ -n "$DYN_GENERATED" ]; then
+            DYN_GEN_EPOCH=$(date -u -d "$DYN_GENERATED" +%s 2>/dev/null || echo "$NOW_EPOCH")
+            DYN_AGE_SEC=$(( NOW_EPOCH - DYN_GEN_EPOCH ))
+            # If the sidecar is older than 90 minutes (3 missed runs) treat it as stale.
+            if [ "$DYN_AGE_SEC" -gt 5400 ]; then DYN_OVERALL="STALE"; fi
+        fi
+    else
+        echo "WARNING: $DYNAMIC_SIDECAR is empty or malformed JSON. Treating as unavailable." >&2
+    fi
+else
+    echo "WARNING: $DYNAMIC_SIDECAR not found or not readable. Treating as unavailable." >&2
+fi
+
+fmt_stat_summary() {
+    local prefix=$1 f=$2 r=$3 a=$4 s=$5 st=$6
+    [ "$f" -gt 0 ] && echo -n "<a href='#${prefix}-FRESH' class='badge-link'><span class='badge ok'>FRESH: $f</span></a> "
+    [ "$r" -gt 0 ] && echo -n "<a href='#${prefix}-RECENT' class='badge-link'><span class='badge warn'>RECENT: $r</span></a> "
+    [ "$a" -gt 0 ] && echo -n "<a href='#${prefix}-AGED' class='badge-link'><span class='badge aged'>AGED: $a</span></a> "
+    [ "$s" -gt 0 ] && echo -n "<a href='#${prefix}-STALE' class='badge-link'><span class='badge stale'>STALE: $s</span></a> "
+    [ "$st" -gt 0 ] && echo -n "<a href='#${prefix}-STATIC' class='badge-link'><span class='badge static'>STATIC: $st</span></a> "
+}
+
+fmt_dyn_summary() {
+    local prefix=$1 active=$2 idle=$3 empty=$4 timeout=$5 failed=$6
+    [ "$active" -gt 0 ]  && echo -n "<a href='#${prefix}-ACTIVE' class='badge-link'><span class='badge ok'>ACTIVE: $active</span></a> "
+    [ "$idle" -gt 0 ]    && echo -n "<a href='#${prefix}-IDLE' class='badge-link'><span class='badge static'>IDLE: $idle</span></a> "
+    [ "$empty" -gt 0 ]   && echo -n "<a href='#${prefix}-EMPTY' class='badge-link'><span class='badge warn'>EMPTY: $empty</span></a> "
+    [ "$timeout" -gt 0 ] && echo -n "<a href='#${prefix}-TIMEOUT' class='badge-link'><span class='badge aged'>TIMEOUT: $timeout</span></a> "
+    [ "$failed" -gt 0 ]  && echo -n "<a href='#${prefix}-FAILED' class='badge-link'><span class='badge stale'>FAILED: $failed</span></a> "
+}
+
+dyn_badge_class() { # This function is fine as is, it just maps states to CSS classes
+    case "$1" in
+        OK)       echo "ok" ;;
+        DEGRADED) echo "warn" ;;
+        DOWN)     echo "stale" ;;
+        STALE)    echo "aged" ;;
+        *)        echo "static" ;;
+    esac
+}
+
+# ── HTML row builder & stat accumulator ──────────────────────────────────────
+# Args: $1=filepath  $2=category-label
+emit_file_row() {
+    local filepath="$1"
+    local label="$2"
+    local filename
+    filename=$(basename "$filepath")
+    should_ignore "$filepath" "$label" && return
+
+    local mod_epoch mod_human age_sec status_class status_text age_str class_text
+
+    local use_remote=0
+    if [[ "$label" == "map" && -n "$REMOTE_STATUS_HOST" ]]; then
+        use_remote=1
+    elif [[ "$filename" == "wwff_spots.json" && ! "$CQGMA_API_KEY" =~ ^GMA- && -n "${REMOTE_FILE_MOD[$filename]:-}" ]]; then
+        use_remote=1
+    fi
+
+    if [ "$use_remote" -eq 1 ]; then
+        if [ "$REMOTE_STATUS_SYNCED" -eq 1 ] || [[ "$filename" == "wwff_spots.json" && -n "${REMOTE_FILE_MOD[$filename]:-}" ]]; then
+            mod_human="${REMOTE_FILE_MOD[$filename]:-unknown}"
+            mod_epoch=$(date -u -d "$mod_human" +%s 2>/dev/null || echo 0)
+            age_sec=$(( NOW_EPOCH - mod_epoch ))
+            age_sec=$(( age_sec < 0 ? 0 : age_sec ))
+            status_text="${REMOTE_FILE_STATUS[$filename]:-STALE}"
+            case "$status_text" in
+                FRESH)  status_class="ok" ;;
+                RECENT) status_class="warn" ;;
+                AGED)   status_class="aged" ;;
+                STALE)  status_class="stale" ;;
+                *)      status_class="static" ;;
+            esac
+        else
+            status_text="SYNC_ERR"
+            status_class="syncerr"
+            mod_human="unknown"
+            age_sec=0
+            age_str="n/a"
+        fi
+    else
+        mod_epoch=$(stat -c %Y "$filepath" 2>/dev/null || stat -f %m "$filepath" 2>/dev/null || echo 0)
+        mod_human=$(date -u -d "@$mod_epoch" "+%Y-%m-%d %H:%M:%S" 2>/dev/null \
+                 || date -u -r "$mod_epoch" "+%Y-%m-%d %H:%M:%S" 2>/dev/null)
+        age_sec=$(( NOW_EPOCH - mod_epoch ))
+        age_sec=$(( age_sec < 0 ? 0 : age_sec ))
+        class_text=$(classify_age "$age_sec" "$(get_thresholds "$label" "$filename")")
+        status_class="${class_text%% *}"
+        status_text="${class_text#* }"
+    fi
+
+    # Update summary tallies in the current shell
+    case "$label" in
+        map)
+            MAP_TOTAL=$(( MAP_TOTAL + 1 ))
+            case "$status_text" in
+                FRESH)  MAP_FRESH=$(( MAP_FRESH + 1 )) ;;
+                RECENT) MAP_RECENT=$(( MAP_RECENT + 1 )) ;;
+                AGED)   MAP_AGED=$(( MAP_AGED + 1 )) ;;
+                STALE|SYNC_ERR) MAP_STALE=$(( MAP_STALE + 1 )) ;;
+                STATIC) MAP_STATIC=$(( MAP_STATIC + 1 )) ;;
+            esac
+            ;;
+        SDO)
+            SDO_TOTAL=$(( SDO_TOTAL + 1 ))
+            case "$status_text" in
+                FRESH)  SDO_FRESH=$(( SDO_FRESH + 1 )) ;;
+                RECENT) SDO_RECENT=$(( SDO_RECENT + 1 )) ;;
+                AGED)   SDO_AGED=$(( SDO_AGED + 1 )) ;;
+                STALE|SYNC_ERR) SDO_STALE=$(( SDO_STALE + 1 )) ;;
+                STATIC) SDO_STATIC=$(( SDO_STATIC + 1 )) ;;
+            esac
+            ;;
+        *)
+            DATA_TOTAL=$(( DATA_TOTAL + 1 ))
+            case "$status_text" in
+                FRESH)  DATA_FRESH=$(( DATA_FRESH + 1 )) ;;
+                RECENT) DATA_RECENT=$(( DATA_RECENT + 1 )) ;;
+                AGED)   DATA_AGED=$(( DATA_AGED + 1 )) ;;
+                STALE|SYNC_ERR) DATA_STALE=$(( DATA_STALE + 1 )) ;;
+                STATIC) DATA_STATIC=$(( DATA_STATIC + 1 )) ;;
+            esac
+            ;;
+    esac
+
+    # Stream JSON file entry into buffer file
+    if [ -n "${JSON_ENTRIES_FILE:-}" ] && [ -w "$JSON_ENTRIES_FILE" ]; then
+        local safe_name safe_label
+        safe_name=$(printf '%s' "$filename" | sed 's/\\/\\\\/g; s/"/\\"/g')
+        safe_label=$(printf '%s' "$label"   | sed 's/\\/\\\\/g; s/"/\\"/g')
+        if [ "$FIRST_JSON_ENTRY" -eq 0 ]; then
+            printf ',\n' >> "$JSON_ENTRIES_FILE"
+        fi
+        FIRST_JSON_ENTRY=0
+        printf '    {\n      "filename": "%s",\n      "category": "%s",\n      "modified_utc": "%s",\n      "age_seconds": %d,\n      "status": "%s"\n    }' \
+            "$safe_name" "$safe_label" "$mod_human" "$age_sec" "$status_text" >> "$JSON_ENTRIES_FILE"
+    fi
+
+    local id_attr=""
+    local track_var=""
+    case "$label" in
+        map) track_var="TRACK_MAP_${status_text}" ;;
+        SDO) track_var="TRACK_SDO_${status_text}" ;;
+        *)   track_var="TRACK_DATA_${status_text}" ;;
+    esac
+
+    if [ "${!track_var:-0}" -eq 0 ]; then
+        local prefix="data-products"; [ "$label" = "map" ] && prefix="maps"; [ "$label" = "SDO" ] && prefix="sdo"
+        id_attr="id='${prefix}-${status_text}'"
+        eval "${track_var}=1"
+    fi
+
+    [ -z "${age_str:-}" ] && {
+        local age_min=$(( age_sec / 60 ))
+        local age_h=$(( age_sec / 3600 ))
+
+        if   [ "$age_h"   -ge 48 ]; then age_str="$(( age_h / 24 ))d ago"
+        elif [ "$age_h"   -ge 1  ]; then age_str="${age_h}h ago"
+        elif [ "$age_min" -ge 1  ]; then age_str="${age_min}m ago"
+        else                             age_str="${age_sec}s ago"
+        fi
+    }
+
+    echo "    <tr>"
+    echo "      <td class='name'>${filename}</td>"
+    echo "      <td class='category'>${label}</td>"
+    echo "      <td class='timestamp'>${mod_human} UTC</td>"
+    echo "      <td class='age'><span ${id_attr} class='badge ${status_class}'>${status_text}</span><span class='age-str'> ${age_str}</span></td>"
+    echo "    </tr>"
+}
+
+build_rows() {
+    local dir="$1"
+    local label="$2"
+
+    # Special handling for Maps Proxy
+    if [[ "$label" == "map" && -n "$REMOTE_STATUS_HOST" ]]; then
+        if [ "$REMOTE_STATUS_SYNCED" -eq 1 ]; then
+            local found=0
+            for rfname in $(echo "${!REMOTE_FILE_STATUS[@]}" | tr ' ' '\n' | sort); do
+                [[ "${REMOTE_FILE_CAT[$rfname]}" == "map" ]] || continue
+                found=1
+                emit_file_row "$dir/$rfname" "$label"
+            done
+            return
+        else
+            MAP_STALE=1; MAP_TOTAL=1
+            echo "    <tr><td colspan='4' class='missing'>⚠ Proxy Sync failed with ${REMOTE_STATUS_HOST}</td></tr>"
+            return
+        fi
+    fi
+
+    if [ ! -d "$dir" ]; then
+        echo "    <tr><td colspan='4' class='missing'>⚠ Directory not found: ${dir}</td></tr>"
+        return
+    fi
+
+    local found=0
+    while IFS= read -r -d '' filepath; do
+        found=1
+        emit_file_row "$filepath" "$label"
+    done < <(find "$dir" -maxdepth 1 -type f -print0 2>/dev/null | sort -z)
+
+    if [ "$found" -eq 0 ]; then
+        echo "    <tr><td colspan='4' class='empty'>— no files in ${label}/ —</td></tr>"
+    fi
+}
+
+build_data_rows() {
+    local first=1
+    for subdir in "${DATA_SUBDIRS[@]}"; do
+        local dir="${DATA_DIR}/${subdir}"
+
+        if [ "$first" -eq 1 ]; then first=0; else
+            echo "    <tr class='divider'><td colspan='4'></td></tr>"
+        fi
+
+        echo "    <tr class='subdir-header'>"
+        echo "      <td colspan='4'>"
+        echo "        <span class='subdir-label'>${subdir}/</span>"
+        [ ! -d "$dir" ] && echo "        <span class='subdir-missing'>directory not found</span>"
+        echo "      </td>"
+        echo "    </tr>"
+
+        build_rows "$dir" "$subdir"
+    done
+}
+
+# ── Dynamic endpoint HTML rows ───────────────────────────────────────────────
+build_dynamic_rows() {
+    if [ "$DYN_AVAILABLE" -ne 1 ]; then
+        echo "    <tr><td colspan='4' class='missing'>⚠ dynamic_status.json not found — has probe_dynamic_endpoints.sh run yet?</td></tr>"
+        return
+    fi
+
+    echo "$DYNAMIC_SIDECAR_CONTENT" | jq -r '
+        .endpoints as $eps |
+        $eps | to_entries | .[] |
+        .key as $idx | .value as $e |
+        (if ($eps | map(.status) | index($e.status)) == $idx then "id=\"dynamic-endpoints-" + $e.status + "\" " else "" end) as $id_attr |
+        "    <tr>" +
+        "<td class=\"name\">" + $e.path + "</td>" +
+        "<td class=\"category\">" + ($e.http_code|tostring) + "</td>" +
+        "<td class=\"timestamp\">" + ($e.elapsed_ms|tostring) + " ms</td>" +
+        "<td class=\"age\"><span " + $id_attr + "class=\"badge " +
+          (if   $e.status=="ACTIVE"  then "ok"
+           elif $e.status=="IDLE"    then "static"
+           elif $e.status=="EMPTY"   then "warn"
+           elif $e.status=="TIMEOUT" then "aged"
+           else "stale" end) +
+        "\">" + $e.status + "</span></td>" +
+        "</tr>"
+    '
+}
+
+# ── Single-pass data product / map row rendering & stat accumulation ───────
+TMP_DIR="${TMP_DIR:-/opt/hamclock-backend/htdocs/tmp}"
+[ -d "$TMP_DIR" ] && [ -w "$TMP_DIR" ] || TMP_DIR="/tmp"
+
+DATA_ROWS_FILE=$(mktemp "$TMP_DIR/.status_data_XXXXXX.tmp")
+SDO_ROWS_FILE=$(mktemp "$TMP_DIR/.status_sdo_XXXXXX.tmp")
+MAP_ROWS_FILE=$(mktemp "$TMP_DIR/.status_map_XXXXXX.tmp")
+JSON_ENTRIES_FILE=$(mktemp "$TMP_DIR/.status_json_XXXXXX.tmp")
+
+cleanup() {
+    rm -f "$DATA_ROWS_FILE" "$SDO_ROWS_FILE" "$MAP_ROWS_FILE" "$JSON_ENTRIES_FILE"
+}
+trap cleanup EXIT
+
+FIRST_JSON_ENTRY=1
+
+build_data_rows > "$DATA_ROWS_FILE"
+build_rows "$SDO_DIR" "SDO" > "$SDO_ROWS_FILE"
+build_rows "$MAPS_DIR" "map" > "$MAP_ROWS_FILE"
+
+# ── JSON builder ─────────────────────────────────────────────────────────────
+build_json() {
+    {
+        printf '{\n'
+        printf '  "generated_utc": "%s",\n'      "$NOW"
+        printf '  "callsign": "%s",\n'           "$CALLSIGN"
+        printf '  "version": "%s",\n'            "$VERSION"
+        printf '  "hostname": "%s",\n'           "$HOST_HOSTNAME"
+        printf '  "public_ip": "%s",\n'          "$PUBLIC_IP"
+        printf '  "remote_sync_host": "%s",\n'   "$REMOTE_STATUS_HOST"
+        printf '  "remote_sync_ok": %s,\n'       "$( [ "$REMOTE_STATUS_SYNCED" -eq 1 ] && echo "true" || echo "false" )"
+        printf '  "summary": {\n'
+        printf '    "data_product_files": %d,\n' "$DATA_TOTAL"
+        printf '    "sdo_files": %d,\n'          "$SDO_TOTAL"
+        printf '    "map_files": %d,\n'          "$MAP_TOTAL"
+        printf '    "dynamic_endpoints": %d,\n'  "$DYN_TOTAL"
+        printf '    "dynamic_active": %d,\n'     "$DYN_ACTIVE"
+        printf '    "dynamic_idle": %d,\n'       "$DYN_IDLE"
+        printf '    "dynamic_healthy": %d,\n'    "$DYN_HEALTHY"
+        printf '    "count_24h": %d,\n'             "$DYN_COUNT_24H"
+        printf '    "unique_hamclocks_24h": %d,\n'  "$DYN_COUNT_24H"
+        printf '    "dynamic_count_24h": %d,\n'     "$DYN_COUNT_24H"
+        printf '    "stable_version": "%s",\n'      "$STABLE_VERSION"
+        printf '    "stable_count_24h": %d,\n'      "$DYN_COUNT_STABLE_24H"
+        printf '    "count_stable_24h": %d,\n'      "$DYN_COUNT_STABLE_24H"
+        printf '    "beta_version": "%s",\n'        "$BETA_VERSION"
+        printf '    "beta_count_24h": %d,\n'        "$DYN_COUNT_BETA_24H"
+        printf '    "count_beta_24h": %d,\n'        "$DYN_COUNT_BETA_24H"
+        printf '    "total_files": %d\n'         "$(( DATA_TOTAL + SDO_TOTAL + MAP_TOTAL ))"
+        printf '  },\n'
+
+        # Inline the full dynamic sidecar (or null if missing) so consumers
+        # have one place to look. Cheap: it's already JSON.
+        if [ "$DYN_AVAILABLE" -eq 1 ]; then
+            # Use the already read and validated content
+            printf '  "dynamic": %s,\n' "$DYNAMIC_SIDECAR_CONTENT"
+        else
+            printf '  "dynamic": null,\n'
+        fi
+
+        printf '  "files": [\n'
+        [ -f "$JSON_ENTRIES_FILE" ] && cat "$JSON_ENTRIES_FILE"
+        printf '\n  ]\n'
+        printf '}\n'
+    } > "$OUTPUT_JSON"
+}
+
+# ── Write HTML ───────────────────────────────────────────────────────────────
+{
+cat << HTML_HEAD
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="300">
+  <title>${CALLSIGN} · Data Product Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #f7f5f2;
+      --panel:    #fdfcfa;
+      --border:   #e0dbd4;
+      --accent:   #3d6b99;
+      --accent2:  #3a7a56;
+      --accent3:  #7a5a99;
+      --accent4:  #99623d;
+      --dim:      #9a9590;
+      --text:     #2e2b27;
+      --muted:    #7a756e;
+      --ok:       #2e7a50;
+      --warn:     #8a6200;
+      --aged:     #8a4e00;
+      --stale:    #9e2020;
+      --static:   #3d6b99;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px 16px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--panel);
+      flex-wrap: wrap;
+    }
+    .header-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .callsign {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 600;
+      font-size: clamp(1.3rem, 5vw, 2.2rem);
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+    .subtitle { font-size: 0.7rem; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+    .header-right {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .clock-label { font-size: 0.65rem; letter-spacing: 0.05em; color: var(--muted); text-transform: uppercase; }
+    .clock {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: clamp(0.78rem, 2.5vw, 1.0rem);
+      color: var(--accent2);
+      letter-spacing: 0.02em;
+      font-weight: 500;
+    }
+
+    /* ── Summary bar ── */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .summary-item {
+      padding: 12px 20px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+      transition: background 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .summary-item:has(.summary-link):hover {
+      background: #fff;
+      box-shadow: inset 0 0 0 1px var(--accent), 0 4px 12px rgba(0,0,0,0.05);
+      z-index: 10;
+    }
+    .summary-item:has(.summary-link):active { transform: translateY(1px); }
+    .summary-item:has(.summary-link):hover .summary-label { color: var(--accent); }
+
+    .summary-half {
+      grid-column: span 3;
+    }
+    .summary-half:nth-of-type(2n) {
+      border-right: none;
+    }
+    .summary-third {
+      grid-column: span 2;
+      border-bottom: none;
+    }
+    .summary-third:last-child {
+      border-right: none;
+    }
+
+    .summary-label { font-size: 0.62rem; letter-spacing: 0.06em; color: var(--muted); text-transform: uppercase; }
+    .summary-value {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--accent);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
+      min-height: 1.8rem;
+    }
+    .summary-link { text-decoration: none; color: inherit; display: block; }
+    .summary-link::after {
+      content: "";
+      position: absolute;
+      top: 0; right: 0; bottom: 0; left: 0;
+      z-index: 1;
+    }
+    .badge-link {
+      text-decoration: none;
+      cursor: pointer;
+      position: relative;
+      z-index: 3;
+    }
+    .badge-link:hover .badge { filter: brightness(0.95); }
+    .badge-cycle-link {
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .badge-cycle-link:hover .badge { filter: brightness(0.95); }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px 24px;
+      background: #f0ede8;
+      border-bottom: 1px solid var(--border);
+    }
+    .legend-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .legend-label {
+      font-size: 0.63rem;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      min-width: 150px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.65rem; color: var(--muted); }
+
+    /* ── Sections ── */
+    .section { padding: 20px 24px; border-bottom: 1px solid var(--border); scroll-margin-top: 20px; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .section-icon {
+      width: 4px; height: 18px; background: var(--accent);
+      border-radius: 2px; flex-shrink: 0; opacity: 0.7;
+    }
+    .maps-icon    { background: var(--accent2); }
+    .sdo-icon     { background: var(--accent3); }
+    .dynamic-icon { background: var(--accent4); }
+    .section-title {
+      font-family: 'IBM Plex Sans', sans-serif; font-size: 0.78rem; font-weight: 600;
+      letter-spacing: 0.07em; color: var(--text); text-transform: uppercase;
+    }
+    .section-path {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--dim);
+      margin-left: auto;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 40vw;
+    }
+
+    .dynamic-summary {
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ── Table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead tr { border-bottom: 1px solid var(--border); }
+    th {
+      font-size: 0.64rem; letter-spacing: 0.06em; color: var(--muted);
+      text-transform: uppercase; text-align: left; padding: 7px 10px; font-weight: 500;
+    }
+    tbody tr { border-bottom: 1px solid rgba(200,193,185,0.4); transition: background 0.12s; }
+    tbody tr:hover { background: rgba(61,107,153,0.04); }
+
+    tr.subdir-header { background: rgba(61,107,153,0.05); border-top: 1px solid var(--border); border-bottom: none; }
+    tr.subdir-header:hover { background: rgba(61,107,153,0.05); }
+    tr.subdir-header td { padding: 6px 10px; }
+    .subdir-label {
+      font-family: 'IBM Plex Mono', monospace; font-size: 0.73rem;
+      font-weight: 500; letter-spacing: 0.02em; color: var(--accent);
+    }
+    .subdir-missing { font-size: 0.65rem; color: var(--stale); margin-left: 8px; }
+    tr.divider td { padding: 0; height: 4px; background: transparent; border: none; }
+
+    td { padding: 8px 10px; vertical-align: middle; }
+    td.name {
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--text);
+      word-break: break-all;
+      min-width: 0;
+    }
+    td.category { color: var(--muted); font-size: 0.73rem; white-space: nowrap; }
+    td.timestamp { font-family: 'IBM Plex Mono', monospace; color: var(--dim); white-space: nowrap; font-size: 0.78rem; }
+    td.age { white-space: nowrap; }
+    .age-str { color: var(--dim); font-size: 0.78rem; }
+
+    td.missing { color: var(--stale); font-size: 0.76rem; padding: 10px; }
+    td.empty   { color: var(--muted); font-size: 0.76rem; padding: 8px 10px; font-style: italic; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 3px;
+      font-size: 0.63rem; font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 600; letter-spacing: 0.03em; vertical-align: middle;
+      scroll-margin-top: 30px;
+    }
+    .badge.ok     { background: #e8f4ee; color: var(--ok);     border: 1px solid #b8d8c5; }
+    .badge.warn   { background: #f7f0de; color: var(--warn);   border: 1px solid #dfc882; }
+    .badge.aged   { background: #f7ede0; color: var(--aged);   border: 1px solid #ddb882; }
+    .badge.stale  { background: #f5e8e8; color: var(--stale);  border: 1px solid #d8a8a8; }
+    .badge.syncerr { background: #fff1f1; color: var(--stale); border: 1px solid #d8a8a8; font-style: italic; }
+    .badge.static { background: #eeeeee; color: #7a7a7a;       border: 1px solid #d1d1d1; }
+
+    /* ── Footer ── */
+    footer {
+      padding: 12px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .footer-note { font-size: 0.65rem; color: var(--muted); }
+    .refresh-indicator { font-size: 0.65rem; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+    .pulse {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent2); opacity: 0.75;
+      animation: pulse 2.5s ease-in-out infinite; flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.75; transform: scale(1); }
+      50%       { opacity: 0.3;  transform: scale(0.7); }
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      header   { padding: 14px 16px 12px; flex-direction: column; align-items: flex-start; gap: 16px; }
+      .header-right { text-align: left; align-items: flex-start; }
+      .section { padding: 14px 16px; }
+      .legend  { padding: 9px 16px; gap: 8px; }
+      footer   { padding: 10px 16px; }
+      .summary-item { padding: 10px 14px; }
+      .summary-value { font-size: 1.05rem; }
+      .section-path { display: none; }
+      th.col-category,  td.category  { display: none; }
+      th.col-timestamp, td.timestamp { display: none; }
+      td.age { white-space: normal; }
+      th, td { padding: 6px 8px; }
+
+
+      .legend-label {
+        flex-basis: 100%;
+        min-width: auto;
+        margin-bottom: -2px;
+      }
+    }
+    @media (max-width: 768px) {
+      .summary  { grid-template-columns: 1fr; }
+      .summary-half, .summary-third {
+        grid-column: span 1;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .summary-item:last-child {
+        border-bottom: none;
+      }
+    }
+    @media (max-width: 380px) {
+      .callsign { font-size: 1.15rem; }
+      .clock    { font-size: 0.72rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="callsign">${CALLSIGN}</div>
+    <div class="subtitle">Data Product Status Board / ${VERSION}</div>
+    <div class="subtitle" style="text-transform: none;">${HOST_HOSTNAME} (${PUBLIC_IP})</div>
+  </div>
+  <div class="header-right">
+    <div class="clock-label">Page generated</div>
+    <div class="clock">${NOW} ${TZ_LABEL}</div>
+    <div class="clock-label" style="margin-top:4px">Auto-refreshes every 5 min</div>
+  </div>
+</header>
+
+<div class="summary">
+  <div class="summary-item summary-half">
+    <a href="#dynamic-endpoints" class="summary-link"><span class="summary-label">Dynamic Endpoints ($DYN_TOTAL)</span></a>
+    <div class="summary-value">$(fmt_dyn_summary "dynamic-endpoints" "$DYN_ACTIVE" "$DYN_IDLE" "$DYN_EMPTY" "$DYN_TIMEOUT" "$DYN_FAILED")</div>
+  </div>
+  <div class="summary-item summary-half">
+    <a href="#data-products" class="summary-link"><span class="summary-label">Data Product Files ($DATA_TOTAL)</span></a>
+    <div class="summary-value">$(fmt_stat_summary "data-products" "$DATA_FRESH" "$DATA_RECENT" "$DATA_AGED" "$DATA_STALE" "$DATA_STATIC")</div>
+  </div>
+  <div class="summary-item summary-half">
+    <a href="#sdo" class="summary-link"><span class="summary-label">SDO Files ($SDO_TOTAL)</span></a>
+    <div class="summary-value">$(fmt_stat_summary "sdo" "$SDO_FRESH" "$SDO_RECENT" "$SDO_AGED" "$SDO_STALE" "$SDO_STATIC")</div>
+  </div>
+  <div class="summary-item summary-half">
+    <a href="#maps" class="summary-link"><span class="summary-label">Map Files ($MAP_TOTAL)</span></a>
+    <div class="summary-value">$(fmt_stat_summary "maps" "$MAP_FRESH" "$MAP_RECENT" "$MAP_AGED" "$MAP_STALE" "$MAP_STATIC")</div>
+  </div>
+  <div class="summary-item summary-third">
+    <span class="summary-label">Unique HamClocks (24h)</span>
+    <div class="summary-value">${DYN_COUNT_24H}</div>
+  </div>
+  <div class="summary-item summary-third">
+    <span class="summary-label">${STABLE_LABEL}</span>
+    <div class="summary-value">${DYN_COUNT_STABLE_24H}</div>
+  </div>
+  <div class="summary-item summary-third">
+    <span class="summary-label">${BETA_LABEL}</span>
+    <div class="summary-value">${DYN_COUNT_BETA_24H}</div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-group">
+    <span class="legend-label">DYNAMIC ENDPOINTS:</span>
+    <div class="legend-item"><span class="badge ok">ACTIVE</span> data ok</div>
+    <div class="legend-item"><span class="badge warn">EMPTY</span> no data</div>
+    <div class="legend-item"><span class="badge static">IDLE</span> working/no spots</div>
+    <div class="legend-item"><span class="badge aged">TIMEOUT</span> connection lost</div>
+    <div class="legend-item"><span class="badge stale">FAILED</span> error</div>
+  </div>
+  <div class="legend-group">
+    <span class="legend-label">FILES:</span>
+    <div class="legend-item"><span class="badge ok">FRESH</span> updated</div>
+    <div class="legend-item"><span class="badge warn">RECENT</span> late</div>
+    <div class="legend-item"><span class="badge aged">AGED</span> old</div>
+    <div class="legend-item"><span class="badge stale">STALE</span> stalled</div>
+    <div class="legend-item"><span class="badge syncerr">SYNC_ERR</span> sync failed</div>
+    <div class="legend-item"><span class="badge static">STATIC</span> baseline</div>
+  </div>
+</div>
+
+<!-- Dynamic Endpoints -->
+<div class="section" id="dynamic-endpoints">
+  <div class="section-header">
+    <div class="section-icon dynamic-icon"></div>
+    <span class="section-title">Dynamic Endpoints ($DYN_TOTAL)</span>
+    <span class="section-path">probe results from ${DYN_GENERATED:-never}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Endpoint</th>
+        <th class="col-category">HTTP</th>
+        <th class="col-timestamp">Latency</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+$(build_dynamic_rows)
+    </tbody>
+  </table>
+</div>
+
+<!-- Data Products -->
+<div class="section" id="data-products">
+  <div class="section-header">
+    <div class="section-icon"></div>
+    <span class="section-title">Data Products ($DATA_TOTAL)</span>
+    <span class="section-path">${DATA_DIR}/{$(IFS=,; echo "${DATA_SUBDIRS[*]}")}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th class="col-category">Category</th>
+        <th class="col-timestamp">Last Modified (UTC)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+HTML_HEAD
+
+cat "$DATA_ROWS_FILE"
+
+cat << HTML_SDO
+    </tbody>
+  </table>
+</div>
+
+<!-- SDO -->
+<div class="section" id="sdo">
+  <div class="section-header">
+    <div class="section-icon sdo-icon"></div>
+    <span class="section-title">SDO ($SDO_TOTAL)</span>
+    <span class="section-path">${SDO_DIR}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th class="col-category">Category</th>
+        <th class="col-timestamp">Last Modified (UTC)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+HTML_SDO
+
+cat "$SDO_ROWS_FILE"
+
+cat << HTML_MAPS
+    </tbody>
+  </table>
+</div>
+
+<!-- Maps -->
+<div class="section" id="maps">
+  <div class="section-header">
+    <div class="section-icon maps-icon"></div>
+    <span class="section-title">Maps ($MAP_TOTAL)</span>
+    <span class="section-path">${MAPS_DIR}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th class="col-category">Category</th>
+        <th class="col-timestamp">Last Modified (UTC)</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+HTML_MAPS
+
+cat "$MAP_ROWS_FILE"
+
+cat << HTML_FOOT
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  <div class="footer-note">73 · ${CALLSIGN} · Generated by generate_status_json.sh / ${VERSION}</div>
+  <div class="refresh-indicator">
+    <div class="pulse"></div>
+    Auto-refresh active · every 5 minutes
+  </div>
+</footer>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const sections = ['dynamic-endpoints', 'data-products', 'sdo', 'maps'];
+  const statusMap = { 'SYNC_ERR': 'STALE' };
+
+  sections.forEach(secId => {
+    const section = document.getElementById(secId);
+    if (!section) return;
+
+    const badges = Array.from(section.querySelectorAll('tbody td.age .badge'));
+    const groups = {};
+
+    badges.forEach(badge => {
+      const rawStatus = badge.textContent.trim();
+      const status = statusMap[rawStatus] || rawStatus;
+      if (!groups[status]) {
+        groups[status] = [];
+      }
+      groups[status].push(badge);
+    });
+
+    for (const [status, list] of Object.entries(groups)) {
+      list.forEach((badge, idx) => {
+        // Assign unique ID to each badge so it can be targeted
+        if (idx === 0) {
+          badge.id = secId + '-' + status;
+        } else {
+          badge.id = secId + '-' + status + '-' + (idx + 1);
+        }
+
+        // Create link destination
+        let nextHref = '#';
+        if (idx < list.length - 1) {
+          nextHref = '#' + secId + '-' + status + '-' + (idx + 2);
+        }
+
+        // Wrap badge in an anchor tag
+        const link = document.createElement('a');
+        link.href = nextHref;
+        link.className = 'badge-cycle-link';
+
+        badge.parentNode.insertBefore(link, badge);
+        link.appendChild(badge);
+      });
+    }
+  });
+});
+</script>
+
+</body>
+</html>
+HTML_FOOT
+
+} > "$OUTPUT"
+
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] Status board written to ${OUTPUT}"
+
+build_json
+echo "[$(date -u '+%Y-%m-%d %H:%M:%S UTC')] JSON status written  to ${OUTPUT_JSON}"
+

@@ -1,0 +1,98 @@
+# Rate limit zones for weather endpoint to respect OpenWeatherMap API limits
+# 1. Global ceiling across all clients combined (50 requests/min to protect OWM upstream API)
+limit_req_zone "global_wx" zone=wx_global:1m rate=50r/m;
+# 2. Per-client limit (10 requests/min per IP) to prevent any single client from monopolizing quota
+limit_req_zone $binary_remote_addr zone=wx_per_ip:10m rate=10r/m;
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+
+    ssl_certificate /etc/nginx/server.pem;
+    ssl_certificate_key /etc/nginx/server.pem;
+
+    # Log formats and locations
+    access_log /var/log/nginx/access.log;
+    error_log /var/log/nginx/error.log warn;
+
+    # Disable keeping connections alive if needed by HamClock (same as Lighttpd)
+    keepalive_timeout 0;
+
+    # Allow POST uploads (e.g. diagnostic logs) up to 16MB before backend handler checks
+    client_max_body_size 16m;
+
+    # Buffer up to 2MB request bodies in RAM to prevent disk I/O latency and HTTP 499 client timeouts
+    client_body_buffer_size 2m;
+    client_body_timeout 60s;
+
+    # Rate limit /ham/HamClock/wx.pl: fair-share per client and global safety ceiling
+    location = /ham/HamClock/wx.pl {
+        limit_req zone=wx_per_ip burst=3 nodelay;
+        limit_req zone=wx_global burst=5 nodelay;
+        limit_req_status 429;
+        error_page 429 = @wx_rate_limited;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.0;
+
+        # HamClock postDiags() closes TCP socket immediately after writing without reading response
+        proxy_ignore_client_abort on;
+
+        # Forward headers for proxy identification
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for CGI responsiveness
+        proxy_buffering off;
+
+        # Match VOACAP timeouts (up to 300s)
+        proxy_read_timeout 300s;
+        proxy_send_timeout 360s;
+    }
+
+    # Fallback location when rate limited: proxies to wx.pl with X-Rate-Limited header
+    # so wx.pl returns cached/default weather data with HTTP 200 OK, preventing client thundering herd
+    location @wx_rate_limited {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.0;
+
+        proxy_ignore_client_abort on;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Rate-Limited "1";
+
+        proxy_buffering off;
+
+        proxy_read_timeout 300s;
+        proxy_send_timeout 360s;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.0;
+
+        # HamClock postDiags() closes TCP socket immediately after writing without reading response
+        proxy_ignore_client_abort on;
+
+        # Forward headers for proxy identification
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for CGI responsiveness
+        proxy_buffering off;
+
+        # Match VOACAP timeouts (up to 300s)
+        proxy_read_timeout 300s;
+        proxy_send_timeout 360s;
+    }
+}

@@ -5,6 +5,8 @@
 .PHONY: default
 
 CXX = g++
+AR = ar
+RANLIB = ranlib
 
 OBJS = \
 	Adafruit_BME280.o \
@@ -26,15 +28,15 @@ OBJS = \
 	WiFiUdp.o \
         Wire.o \
 	i2cdriver.o \
-	passwords.o
+	passwords.o \
+	timeout.o
 
-default:
-	@echo "This Makefile is not intended for stand-alone use -- use only from HamClock's main Makefile"
+default: libarduino.a
 
 libarduino.a: $(OBJS)
 	rm -f $@
-	ar r $@ $(OBJS)
-	ranlib $@
+	$(AR) r $@ $(OBJS)
+	$(RANLIB) $@
 
 clean:
 	touch x.o x.a x.a.1

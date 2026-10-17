@@ -1,0 +1,154 @@
+#!/bin/bash
+
+# Copyright (C) 2026 Open HamClock Backend (OHB) Contributors
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+echo "This image is based on git: '$(cat hamclock-backend/git.version)'"
+echo "Start up time: $(date -u +%H:%M:%S)"
+
+# capture any env vars for cron, etc
+printenv | grep ^HOST_HOSTNAME= >> /etc/environment 
+printenv | grep ^ALPHA_INSTALL= >> /etc/environment 
+printenv | grep ^PROXY_MAPS= >> /etc/environment
+
+echo "Preparing for pskr ..."
+mkdir -p /opt/hamclock-backend/htdocs/pskr
+chown $PSKR_UID /opt/hamclock-backend/htdocs/pskr
+chmod 700 /opt/hamclock-backend/htdocs/pskr
+
+echo "Preparing for wspr ..."
+mkdir -p /opt/hamclock-backend/htdocs/wspr
+chown $WSPR_UID /opt/hamclock-backend/htdocs/wspr
+chmod 700 /opt/hamclock-backend/htdocs/wspr
+
+# tmp in same fs for atomic moves
+mkdir -p /opt/hamclock-backend/htdocs/tmp
+chown www-data /opt/hamclock-backend/htdocs/tmp
+
+# migrating to a new home
+mkdir -p /opt/hamclock-backend/htdocs/state
+if [ -e /opt/hamclock-backend/htdocs/prime_crontabs.done ]; then
+    mv /opt/hamclock-backend/htdocs/prime_crontabs.done /opt/hamclock-backend/htdocs/state
+fi
+
+echo "Syncing the initial, static directory structure ..."
+mkdir -p /opt/hamclock-backend/htdocs/ham
+cp -a /opt/hamclock-backend/ham/HamClock /opt/hamclock-backend/htdocs/ham
+
+if [ -n "$MAP_SIZES" ]; then
+    echo "Limit map sizes to support screen size: '$MAP_SIZES'"
+    cp \
+        /opt/hamclock-backend/scripts/"map_sizes-$MAP_SIZES.txt" \
+        /opt/hamclock-backend/scripts/map_sizes.txt
+fi
+
+echo Installing root folder ...
+# remove traces of old, obsolete dashboard
+find /opt/hamclock-backend/htdocs -maxdepth 1 -type f -exec rm -f "{}" +
+cp /opt/hamclock-backend/ham/favicon.ico /opt/hamclock-backend/htdocs
+cp /opt/hamclock-backend/ham/favicon.svg /opt/hamclock-backend/htdocs
+cp /opt/hamclock-backend/ham/robots.txt /opt/hamclock-backend/htdocs
+cp /opt/hamclock-backend/ham/index.html /opt/hamclock-backend/htdocs/index.html
+cp /opt/hamclock-backend/docker/manage-ohb-docker.sh /opt/hamclock-backend/htdocs/
+
+# start the background proxy daemon
+echo "Starting OHB Proxy Daemon ..."
+/usr/sbin/runuser -u www-data -- /usr/bin/perl /opt/hamclock-backend/scripts/ohb-proxy-daemon.pl daemon -l http://127.0.0.1:8081 &
+
+# start the web server
+echo "Starting lighttpd ..."
+/usr/sbin/lighttpd -f /etc/lighttpd/lighttpd.conf
+
+echo "Starting nginx ..."
+# Enforce your exact required permissions and ownership
+if findmnt -M /var/log/nginx >/dev/null 2>&1; then
+    NGINX_GID=$HOST_USER_GID
+else
+    NGINX_GID=www-data
+fi
+# Pre-create the log files if they don't exist
+touch /var/log/nginx/access.log /var/log/nginx/error.log
+chown www-data:$NGINX_GID /var/log/nginx/*.log
+chmod 0640 /var/log/nginx/*.log
+# logrotate handles group correctly
+sed -i "s/__NGINX_GID__/$NGINX_GID/" /etc/logrotate.d/nginx
+# Hand over execution to Nginx
+/usr/sbin/nginx
+
+# only needs to be primed when docker volume container is instantiated
+if [ ! -e /opt/hamclock-backend/htdocs/state/prime_crontabs.done ]; then
+    echo "Running OHB for the first time."
+
+    echo "Priming the data set ..."
+    /usr/sbin/runuser -u www-data /opt/hamclock-backend/prime_crontabs.sh
+
+    touch /opt/hamclock-backend/htdocs/state/prime_crontabs.done
+    echo "Done! OHB data has been primed."
+
+    LAST_TIME_EPOCH=$(date -u +%s)
+else
+    echo "OHB was previously installed and does not need to be primed."
+
+    echo "Running the one-time-run script"
+    /opt/one-time-run.sh
+
+    LAST_TIME_EPOCH=$(find /opt/hamclock-backend/htdocs -type f -printf '%T@ %p\n' | sort -n | tail -n 1 | cut -d. -f1)
+    echo "Last running timestamp found is: '$(date -ud @$LAST_TIME_EPOCH)'"
+fi
+
+echo $LAST_TIME_EPOCH > /opt/last-ts-running.txt
+echo $(date -u +%s) > /opt/started-running.txt
+
+# start cron
+echo "Starting cron ..."
+/usr/sbin/cron
+
+echo "Starting blitzortung ..."
+(
+    while true; do
+        /usr/sbin/runuser -u www-data -- /opt/hamclock-backend/scripts/blitzortung_daemon.py
+        echo "$(date -u +%H:%M:%S): Blitzortung stopped. Restarting in 5 seconds ..."
+        sleep 5
+    done
+)&
+
+echo "Starting HAB ..."
+(
+    while true; do
+        /usr/sbin/runuser -u www-data -- /opt/pipx/sondehub/venvs/sondehub/bin/python3 /opt/hamclock-backend/scripts/hab_daemon.py
+        echo "$(date -u +%H:%M:%S): HAB stopped. Restarting in 5 seconds ..."
+        sleep 5
+    done
+)&
+
+echo "OHB is running and ready to use at: $(date -u +%H:%M:%S)"
+
+# this extra work causes the container to stop quickly. We need to 
+# kill our own jobs or bash will zombie and then docker takes 10 seconds
+# before it sends kill -9. The wait will respond to a TERM whereas 
+# tail does not so we need to background tail.
+cleanup() {
+    echo "Caught SIGTERM, shutting down services..."
+    kill $(jobs -p)
+    exit 0
+}
+
+# Trap the TERM signal
+trap cleanup SIGTERM
+
+# hold the script to keep the container running
+tail --pid=$(pidof cron) -f /dev/null &
+wait $!
+

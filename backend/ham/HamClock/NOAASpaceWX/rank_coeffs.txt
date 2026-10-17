@@ -1,0 +1,14 @@
+# y = mx + b, where x = raw space weather value, y = small integer for ranking.
+# column 1 is SPCWX_t index and must be in this order
+
+#       m       b
+0       0.05    -6              // Sunspot_N      60 => -3       200 => 4
+1       1e6     -2              // X-Ray          (C)1e-6 => -2  (M)1e-5 => 8
+2       0.1     -15             // Solar_Flux
+3       3.2     -8.8            // Planetary_K    1 => -5.6   4 =>  4   9 => 20
+4       1       -2              // Solar_Wind
+5       1       -20             // DRAP
+6       -0.8    -2              // Bz_Bt          0 => -2         -10 => 6
+7       3       -3              // NOAA_SpcWx     0 => -3   1 => 0  3 => 6
+8       0.16    -6              // AURORA         50 => 2         100 => 10
+

@@ -1,0 +1,125 @@
+name: Release with manage-ohb-docker.sh asset
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name (e.g., v0.0.1)'
+        required: true
+        default: 'v0.0.0'
+      publish_release:
+        description: 'Publish GitHub release directly (set to false for draft)'
+        required: true
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'true'
+      build_docker:
+        description: 'Build and push Docker image'
+        required: true
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+        default: 'true'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Create Release and Upload Assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
+        run: |
+          TAG="${{ inputs.tag_name || github.ref_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            # Define asset names with the tag
+            MGR_NAME="manage-ohb-docker-$TAG.sh"
+            VERIFY_NAME="verify_firmware_integrity-$TAG.pl"
+
+            # create the distribution directory and clean up any old ones
+            mkdir -p dist
+
+            # create a manager with version in the name and file
+            sed "s/^\(OHB_MANAGER_VERSION=\).*$/\1$TAG/" ./docker/manage-ohb-docker.sh \
+            > "./docker/$MGR_NAME"
+
+            # create the integrity utility with version injected
+            sed "s/\(my \$VERSION = \)\"[^\"]*\"/\1\"$TAG\"/" \
+            ./scripts/utility/verify_firmware_integrity.pl \
+            > "./dist/$VERIFY_NAME"
+
+            # add version artifact
+            echo "TAG=$TAG" > VERSION.txt
+
+            # create the source bundles using git archive for a clean package
+            git archive --format=tar.gz --output="dist/OHB-$TAG.tar.gz" HEAD
+            git archive --format=zip --output="dist/OHB-$TAG.zip" HEAD
+
+            # Generate checksums for all assets
+            cd dist && sha256sum * > CHECKSUMS && cd ..
+
+            EXTRA_FLAGS=()
+            if [ "$PUBLISH_RELEASE" = "false" ]; then
+              EXTRA_FLAGS+=(--draft)
+            fi
+
+            # Grabs file from repo tree and uploads with a label
+            gh release create "$TAG" \
+              "./docker/$MGR_NAME#Manage OHB Docker Installs" \
+              "./dist/$VERIFY_NAME#Firmware Integrity Utility" \
+              "dist/OHB-$TAG.tar.gz#OHB Source Tarball" \
+              "dist/OHB-$TAG.zip#OHB Source Zip" \
+              "dist/CHECKSUMS#Asset Checksums" \
+              --title "OHB Release: $TAG" \
+              --generate-notes \
+              "${EXTRA_FLAGS[@]}"
+          fi
+
+  docker:
+    name: Build and Push Docker Image
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ needs.release.result == 'success' && (github.event_name == 'push' || inputs.build_docker == true || inputs.build_docker == 'true') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Multiplatform Image
+        run: |
+          TAG="${{ inputs.tag_name || github.ref_name }}"
+          export TAG
+          chmod +x docker/build-image.sh
+          ./docker/build-image.sh -m
+

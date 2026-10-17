@@ -1,0 +1,77 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace 'my.hamradio.n7six.hamclock'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "my.hamradio.n7six.hamclock"
+        minSdk 24
+        targetSdk 34
+        versionCode 761
+        versionName "7.6.1"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Debug-signed so the APK is immediately installable.
+            // Re-sign with your own key before publishing to an app store.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // The native HamClock server binary ships as a native library
+    // (libhamclock.so per-ABI under src/main/jniLibs, built by
+    // packaging/build-apk-native.ps1). Android 10+ forbids execve() of files
+    // in the app's data home dir, but the package manager extracts jniLibs to
+    // the executable nativeLibraryDir at install time, so we exec it from there.
+    packagingOptions {
+        jniLibs.useLegacyPackaging true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
+
+// Name the output APK after the project version
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        def version = android.defaultConfig.versionName
+        output.outputFileName = "n7six.HamClock.v${version}.apk"
+    }
+}
+
+// After building, copy the APK into the project dist/ directory
+def distDir = new File(rootProject.rootDir.parentFile, "dist")
+distDir.mkdirs()
+
+tasks.register("copyDebugApkToDist", Copy) {
+    dependsOn assembleDebug
+    from(file("$buildDir/outputs/apk/debug/n7six.HamClock.v${android.defaultConfig.versionName}.apk"))
+    into(distDir)
+    doLast {
+        println "APK copied to $distDir/n7six.HamClock.v${android.defaultConfig.versionName}.apk"
+    }
+}
+
+tasks.register("copyReleaseApkToDist", Copy) {
+    dependsOn assembleRelease
+    from(file("$buildDir/outputs/apk/release/n7six.HamClock.v${android.defaultConfig.versionName}.apk"))
+    into(distDir)
+    doLast {
+        println "APK copied to $distDir/n7six.HamClock.v${android.defaultConfig.versionName}.apk"
+    }
+}

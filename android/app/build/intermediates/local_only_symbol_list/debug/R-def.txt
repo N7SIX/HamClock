@@ -1,0 +1,10 @@
+R_DEF: Internal format may change without notice
+local
+id root
+id status
+id webview
+layout activity_main
+mipmap ic_launcher
+string app_name
+string starting
+style Theme.N7SIXHamClock

@@ -1,0 +1,20 @@
+/var/log/nginx/*.log {
+    daily
+    missingok
+    rotate 15
+    notifempty
+    sharedscripts
+    create 0640 www-data www-data
+
+    postrotate
+        chgrp __NGINX_GID__ /var/log/nginx/*.log
+        nginx -s reopen
+
+        TODAY=$(date +%Y%m%d)
+        TARGET="/var/log/nginx/access.log-$TODAY"
+ 
+        if [ -f "$TARGET" ]; then
+            anonip --input "$TARGET" | sed 's/call=[^&]\+/call=W1AW/' | gzip > "$TARGET.anon.gz"
+        fi
+    endscript
+}
