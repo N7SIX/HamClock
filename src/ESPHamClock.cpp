@@ -1601,7 +1601,7 @@ static void drawRotatingMessage()
         case ROTM_BE: {
 
             if (backend_host[0]) {
-                snprintf (str, sizeof(str), "%s", backend_host);
+                snprintf (str, sizeof(str), "%s", DISPLAY_HOST);
             } else {
                 strcpy (str, "No host");
                 tft.setTextColor (RA8875_RED);

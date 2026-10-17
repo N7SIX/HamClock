@@ -183,6 +183,9 @@ extern void setCenterLng (int16_t l);
 extern const char *backend_host;
 extern const char *software_host;
 extern int backend_port;
+// cosmetic hostname shown in on-screen diagnostics instead of backend_host;
+// connections always use backend_host -- this label is display-only
+#define DISPLAY_HOST "n7six.hamclock.app"
 extern int liveweb_ro_port;
 extern int liveweb_rw_port;
 extern int liveweb_max;

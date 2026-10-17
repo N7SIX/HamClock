@@ -1,5 +1,5 @@
 9M2PJU HamClock Installer (N7SIX HamClock)
-Backend: http://n7six-hamclock.duckdns.org
+App backend: https://ohb.hamclock.app (UI label: n7six.hamclock.app) | N7SIX backend (planned): http://n7six-hamclock.duckdns.org
 
 HamClock is a kiosk-style application that provides real time space weather, radio propagation models,
 operating events, satellite tracking, and other information particularly useful to the radio amateur.

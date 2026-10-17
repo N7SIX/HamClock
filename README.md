@@ -60,7 +60,7 @@ To ensure HamClock remains fully functional, reliable, and open for future gener
 
 ### What Changed in Version 4.24+ (Current: 7.6.1)
 
-- **Hard-Coded Community Backend**: HamClock now connects directly to `n7six-hamclock.duckdns.org:80` by default.
+- **Hard-Coded Community Backend**: HamClock connects to the community backend `ohb.hamclock.app:80` by default, with the cosmetic on-screen label `n7six.hamclock.app`. The N7SIX backend (`n7six-hamclock.duckdns.org:80`) is the designated self-hosted target.
 - **No Switching Scripts or DNS Redirection Required**: Older transitional scripts (`sudo ohb`, `sudo fix-hosts`, `sudo csi`) and manual `/etc/hosts` modifications are no longer required.
 - **Seamless Upgrade**: Full backward compatibility with existing user configurations, callsign profiles, and NVRAM settings in `~/.hamclock/`.
 - **Modern Service Restorations**: Space weather feeds, NOAA alerts, SDO solar imagery, VOACAP HF propagation models, DX cluster spots, satellite orbital TLEs, and contest calendars are completely restored and maintained on high-availability community servers.
@@ -643,7 +643,7 @@ Usage:   hamclock [options]
 | :--- | :--- | :--- | :--- |
 | `-k` | *none* | Skip initial setup countdown and boot immediately | `hamclock -k` |
 | `-g` | *none* | Auto-initialize DE location using public IP geolocation *(requires `-k`)* | `hamclock -k -g` |
-| `-b` | `<host:port>`| Override backend server *(default: `n7six-hamclock.duckdns.org:80`)* | `hamclock -b n7six-hamclock.duckdns.org:80` |
+| `-b` | `<host:port>`| Override backend server *(default: `ohb.hamclock.app:80`)* | `hamclock -b ohb.hamclock.app:80` |
 | `-f` | `on` / `off` | Force initial fullscreen display mode | `hamclock -f on` |
 | `-d` | `<directory>`| Specify working directory *(default: `~/.hamclock/`)* | `hamclock -d /opt/hamclock_data` |
 | `-e` | `<port>` | RESTful web server port *(default: `8080`, `-1` to disable)* | `hamclock -e 8080` |

@@ -3,7 +3,9 @@
 
 #include "HamClock.h"
 
-#define DEFAULT_HOST "n7six-hamclock.duckdns.org"
+// real backend = upstream OHB community server; on-screen diagnostics show
+// the cosmetic DISPLAY_HOST label instead (display-only, see ArduinoLib.h)
+#define DEFAULT_HOST "ohb.hamclock.app"
 // host name and port of backend server
 const char *backend_host = DEFAULT_HOST;
 int backend_port = 80;
@@ -469,9 +471,9 @@ static void initWiFi (bool verbose)
         tftMsg (verbose, 0, "GW: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
         ip = WiFi.dnsIP();
         tftMsg (verbose, 0, "DNS: %d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-        tftMsg (verbose, 0, "BE: %s:%d", backend_host, backend_port);
+        tftMsg (verbose, 0, "BE: %s:%d", DISPLAY_HOST, backend_port);
         if (strcmp(backend_host,software_host) != 0)
-            tftMsg (verbose, 0, "SE: %s", software_host);
+            tftMsg (verbose, 0, "SE: %s", DISPLAY_HOST);
         int rssi;
         bool is_dbm;
         if (readWiFiRSSI(rssi,is_dbm)) {
