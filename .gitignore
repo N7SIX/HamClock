@@ -33,6 +33,21 @@ tests/*.log
 android/.gradle/
 android/app/build/
 android/build/
+android/local.properties
+android/build_output.txt
+
+# Extracted APK artifacts (an unpacked APK was committed by mistake once;
+# block everything that comes out of unzipping an APK at the repo root)
+/AndroidManifest.xml
+/classes.dex
+/resources.arsc
+/androidsupportmultidexversion.txt
+/kotlin-tooling-metadata.json
+/META-INF/
+/kotlin/
+/res/
+/lib/
+/tmp_apk/
 
 # Local packaging helper scripts + build logs
 packaging/_*.ps1
