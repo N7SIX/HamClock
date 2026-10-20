@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: 9m2pju/9m2pju-hamclock-docker
+  IMAGE_NAME: n7six/hamclock
 
 jobs:
   build-and-push:

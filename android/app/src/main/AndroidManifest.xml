@@ -9,19 +9,26 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
+        android:name="androidx.multidex.MultiDexApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.N7SIXHamClock">
 
+        <!-- NOTE: android:usesCleartextTraffic (API 28+) intentionally omitted:
+             cleartext http://127.0.0.1 is allowed by default on API < 28, and the
+             attribute is unknown on 4.x (kept out of the base manifest so old
+             PackageParser never sees it). -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:launchMode="singleTask"
-            android:screenOrientation="fullSensor">
+            android:screenOrientation="sensorLandscape">
+            <!-- NOTE: android:turnScreenOn / showWhenLocked (API 27+) intentionally
+                 omitted here; MainActivity sets FLAG_SHOW_WHEN_LOCKED /
+                 FLAG_TURN_SCREEN_ON programmatically on API < 27. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
