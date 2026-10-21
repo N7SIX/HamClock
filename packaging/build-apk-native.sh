@@ -29,8 +29,7 @@ ABI="${1:-arm64-v8a}"
 # 17 so one APK installs on 4.2.2 (old 32-bit tablets run armeabi-v7a).
 # Per-ABI floor keeps the compiler pointed at an existing sysroot.
 case "$ABI" in
-  arm64-v8a|x86_64)   MIN_API=21 ;;
-  armeabi-v7a|x86)    MIN_API=19 ;;
+  arm64-v8a|armeabi-v7a|x86_64|x86)   MIN_API=21 ;;
   *) echo "Unknown ABI: $ABI"; exit 1 ;;
 esac
 API="$MIN_API"                        # effective NDK target for this ABI
@@ -88,6 +87,7 @@ echo ">> ArduinoLib"; for f in "$REPO"/ArduinoLib/*.cpp; do compile "$f" "$CLANG
 echo ">> wsServer";   for f in "$REPO"/wsServer/src/*.cpp; do compile "$f" "$CLANG"; done
 echo ">> zlib-hc";    for f in "$REPO"/zlib-hc/*.cpp;    do compile "$f" "$CLANG"; done
 echo ">> src ($RES)"; for f in "$REPO"/src/*.cpp;        do compile "$f" "$CLANG"; done
+echo ">> termux/android-stubs"; compile "$REPO/termux/android-stubs.cpp" "$CLANG"
 
 # --- Android fdsan abort workaround (from termux/) --------------------------
 FDSAN="$BUILD/disable-fdsan.o"

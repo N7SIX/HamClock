@@ -211,6 +211,12 @@ class Adafruit_RA8875 {
         bool getRawPix (uint8_t *rgb24, int npix);
         bool getPixelRaw (uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
 
+        // generation number of fb_stage contents: advanced by drawCanvas() after staging,
+        // ie whenever getRawPix() could return different bytes. lets callers skip re-reading
+        // an unchanged screen. getRawPixAndGen() captures pixels and their generation atomically.
+        uint64_t getStageGen (void);
+        bool getRawPixAndGen (uint8_t *rgb24, int npix, uint64_t *genp);
+
 
         // control whether to display gray
         void setGrayDisplay (GrayDpy_t g) {
@@ -333,6 +339,7 @@ class Adafruit_RA8875 {
 	pthread_mutex_t fb_lock;
 	struct fb_var_screeninfo fb_si;
 	volatile bool fb_dirty;
+	uint64_t fb_gen = 0;                    // fb_stage generation, advanced by drawCanvas
 	fbpix_t *fb_canvas;             // main drawing image buffer
 	fbpix_t *fb_stage;              // temp image during staging to fb hw
 	int fb_nbytes;                  // bytes in each in-memory image buffer

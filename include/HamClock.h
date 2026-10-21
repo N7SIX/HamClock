@@ -1864,7 +1864,7 @@ extern void drawEMETool (void);
  *
  */
 
-extern void writeFavicon (FILE *fp);
+extern void writeFavicon (int sock);
 
 
 

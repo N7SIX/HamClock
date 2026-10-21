@@ -46,34 +46,46 @@ LIBS = -lpthread -larduino -lzlib-hc -lws
 CXX = g++
 PYTHON = python3
 
+# Detect OS in a way that works on Unix-like systems and on Windows where
+# the `uname` binary may be missing (e.g. MinGW-w64 builds).
+ifeq ($(OS),Windows_NT)
+    UNAME_S := MINGWNT
+else
+    UNAME_S := $(shell uname -s)
+endif
+
 # macOS does not have X11 by default; this assumes XQuartz or macports xorg has been installed
-ifeq ($(shell uname -s), Darwin)
+ifeq ($(UNAME_S),Darwin)
     CXXFLAGS += -I/opt/X11/include -I/opt/local/include
     LDXXFLAGS += -L/opt/X11/lib -L/opt/local/lib
 endif
 
 # check for proper version of gpiod on linux
-ifeq ($(shell GF=/usr/include/gpiod.h; if [ -r $$GF ] && grep -q "gpiod_line " $$GF; then echo yes; fi), yes)
-    CXXFLAGS += -D_USE_GPIOD
+ifeq ($(UNAME_S),Linux)
+    ifeq ($(shell GF=/usr/include/gpiod.h; if [ -r $$GF ] && grep -q "gpiod_line " $$GF; then echo yes; fi), yes)
+        CXXFLAGS += -D_USE_GPIOD
+    endif
 endif
 
 # FreeBSD needs libgpio libexecinfo and local xorg
-ifeq ($(shell uname -s), FreeBSD)
+ifeq ($(UNAME_S),FreeBSD)
     CXXFLAGS += -I/usr/local/include
     LDXXFLAGS += -L/usr/local/lib
     LIBS += -lgpio -lexecinfo -lm
 endif
 
 # NetBSD
-ifeq ($(shell uname -s), NetBSD)
+ifeq ($(UNAME_S),NetBSD)
     CXXFLAGS += -I/usr/pkg/include -I/usr/X11R7/include
     LDXXFLAGS += -L/usr/pkg/lib -R/usr/pkg/lib -L/usr/X11R7/lib -R/usr/X11R7/lib
     LIBS += -lexecinfo -lm
 endif
 
 # Linux needs libgpiod
-ifeq ($(shell find /usr/lib -name libgpiod.a 2>/dev/null | wc -l), 1)
-    LIBS += -lgpiod
+ifeq ($(UNAME_S),Linux)
+    ifeq ($(shell find /usr/lib -name libgpiod.a 2>/dev/null | wc -l), 1)
+        LIBS += -lgpiod
+    endif
 endif
 
 # make CXXFLAGS available to sub makes

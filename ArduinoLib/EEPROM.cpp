@@ -18,6 +18,8 @@
 #include <sys/file.h>
 #endif
 
+#include "hc_home.h"
+
 #include "Arduino.h"
 #include "EEPROM.h"
 
@@ -39,8 +41,12 @@ const char *EEPROM::getFilename(void)
 
             // preserve old file if found
 	    char oldfn[1024];
-	    snprintf (oldfn, sizeof(oldfn), "%s/.rpihamclock_eeprom", getenv("HOME"));
-            rename (oldfn, newfn.c_str());
+	    char *home = hc_get_home();
+	    if (home) {
+	        snprintf (oldfn, sizeof(oldfn), "%s/.rpihamclock_eeprom", home);
+	        rename (oldfn, newfn.c_str());
+	        free (home);
+	    }
 
 	    filename = strdup (newfn.c_str());
 	}

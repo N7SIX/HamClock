@@ -303,7 +303,7 @@ extern "C" {
 		/**
 		 * @brief On non-websocket event, called when a client sends a normal web page.
 		 */
-		void (*onnonws)(FILE *sockfp, const char *header);
+		void (*onnonws)(int sock, const char *header);
 	};
 
 	/* Forward declarations. */

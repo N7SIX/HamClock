@@ -14,6 +14,9 @@
 #ifndef _WIN32_COMPAT_H
 #define _WIN32_COMPAT_H
 
+#include <stdlib.h>
+#include <string.h>
+
 #ifdef _WIN32
 
 /* Ensure M_PI and other math constants are available from cmath/math.h.
@@ -49,6 +52,7 @@
 #include <fcntl.h>
 #include <time.h>
 #include <ctype.h>
+#include <stddef.h>
 
 /* Undef Windows macros that conflict with HamClock code.
  * HamClock uses INPUT/OUTPUT for GPIO pin modes, but windows.h defines

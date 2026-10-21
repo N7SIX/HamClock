@@ -197,7 +197,8 @@ bool ESPhttpUpdate::findFullPath (const char *argv0, char full_path[], size_t fp
         }
         if (!fp) {
             // look in each PATH entry, beware "."
-            char *onepath, *path = strdup (getenv ("PATH")), *tofree = path;   // don't clobber the real PATH
+            const char *env_path = getenv ("PATH");
+            char *onepath, *path = strdup (env_path ? env_path : ""), *tofree = path;   // don't clobber the real PATH
             while ((onepath = strsep(&path, ":")) != NULL) {
                 if (strcmp (onepath, ".") == 0)
                     snprintf (full_path, fplen, "%s/%s", cwd, argv0);

@@ -41,6 +41,30 @@ const int liveweb_maxmax = MAX_CLIENTS-1;               // max max for -help
 #define LIVE_RBYTES     (BUILD_W*LIVE_BYPPIX)           // bytes per row
 #define COMP_RGB        3                               // composition request code for RGB pixels
 
+// we only send small regions that have changed since previous, ie changes from img_client to img_now.
+// image is divided into fixed sized blocks and those which have changed are coalesced into regions
+// of height one block but variable length. these are collected and sent as one image of height one
+// block preceded by a header defining the location and size of each region. the coordinates and
+// length of a region are in units of blocks, not pixels, to reduce each value's size to one byte
+// each in the header. smaller regions are more efficient but the coords must fit into 8 bit header value.
+#define BLOK_W      (BUILD_W>1600?16:8)             // pixels wide
+#define BLOK_H      8                               // pixels high
+#define BLOK_NCOLS  (BUILD_W/BLOK_W)                // blocks in each row over entire image
+#define BLOK_NROWS  (BUILD_H/BLOK_H)                // blocks in each col over entire image
+#define BLOK_NPIX   (BLOK_W*BLOK_H)                 // size of 1 block, pixels
+#define BLOK_NBYTES (BLOK_NPIX*LIVE_BYPPIX)         // size of 1 block, bytes
+#define BLOK_WBYTES (BLOK_W*LIVE_BYPPIX)            // width of 1 block, bytes
+#define MAX_REGNS   (BLOK_NCOLS*BLOK_NROWS)         // worse case number of regions
+#if BLOK_NCOLS > 255                                // insure fits into uint8_t
+    #error too many block columns
+#endif
+#if BLOK_NROWS > 255                                // insure fits into uint8_t
+    #error too many block rows
+#endif
+#if MAX_REGNS > 65535                              // insure fits into uint16_t
+    #error too many live regions
+#endif
+
 
 
 // record client and possible URL for it to display.
@@ -58,6 +82,10 @@ typedef struct {
     uint8_t *pixels;                                    // this client's current display image
     int pixel_users;                                    // active borrowers of this pixels buffer
     bool pixels_retiring;                               // close has begun; free pixels once the borrowers are gone
+    bool have_capture;                                  // pixels is a valid capture matching the state below
+    uint64_t last_stage_gen;                            // tft.getStageGen() when pixels was captured
+    int last_nweb;                                      // connection count for client's port at that time
+    bool last_mainpage;                                 // mainpage_up at that time -- see updateExistingClient()
 } SessionInfo;
 static SessionInfo *si_list;                            // malloced list
 static int si_n;                                        // n malloced
@@ -186,6 +214,79 @@ static void return_session_pixels (uint8_t *pixels)
     pthread_mutex_unlock (&si_lock);
 }
 
+/* snapshot our overlay inputs for this client under si_lock so the connection count can not
+ * change between open and close underneath us. stage_gen/mainpage are plain reads matching
+ * prior behavior: stage_gen is only a fast-path hint revalidated by capture, and mainpage_up
+ * flips only when the whole UI mode changes which itself forces a full redraw.
+ */
+static void session_snapshot_state (ws_cli_conn_t *client, uint64_t *stage_genp, int *nwebp,
+                                    bool *mainpagep)
+{
+    pthread_mutex_lock (&si_lock);
+    *nwebp = client->port == liveweb_ro_port ? n_roweb : n_rwweb;
+    pthread_mutex_unlock (&si_lock);
+
+    *stage_genp = tft.getStageGen();
+    *mainpagep = mainpage_up;
+}
+
+/* return whether the client's stored image can still be considered up to date, ie nothing that
+ * could change the next update has changed since it was captured. stage_gen/nweb/mainpage are the
+ * values sampled at the start of the pending update -- see updateExistingClient().
+ */
+static bool session_capture_is_current (ws_cli_conn_t *client, uint64_t stage_gen, int nweb, bool mainpage)
+{
+    bool current = false;
+
+    pthread_mutex_lock (&si_lock);
+    for (int i = 0; i < si_n; i++) {
+        SessionInfo *sip = &si_list[i];
+        if (sip->client == client) {
+            current = sip->have_capture && sip->last_stage_gen == stage_gen
+                                        && sip->last_nweb == nweb
+                                        && sip->last_mainpage == mainpage;
+            break;
+        }
+    }
+    pthread_mutex_unlock (&si_lock);
+
+    return (current);
+}
+
+/* remember that the client's stored image matches the given state -- see session_capture_is_current().
+ */
+static void session_record_capture (ws_cli_conn_t *client, uint64_t stage_gen, int nweb, bool mainpage)
+{
+    pthread_mutex_lock (&si_lock);
+    for (int i = 0; i < si_n; i++) {
+        SessionInfo *sip = &si_list[i];
+        if (sip->client == client) {
+            sip->have_capture = true;
+            sip->last_stage_gen = stage_gen;
+            sip->last_nweb = nweb;
+            sip->last_mainpage = mainpage;
+            break;
+        }
+    }
+    pthread_mutex_unlock (&si_lock);
+}
+
+/* force the next update to perform a full capture -- use after the client's stored image has been
+ * changed behind our back, eg by sendClientPNG().
+ */
+static void session_invalidate_capture (ws_cli_conn_t *client)
+{
+    pthread_mutex_lock (&si_lock);
+    for (int i = 0; i < si_n; i++) {
+        SessionInfo *sip = &si_list[i];
+        if (sip->client == client) {
+            sip->have_capture = false;
+            break;
+        }
+    }
+    pthread_mutex_unlock (&si_lock);
+}
+
 /* send difference between client's last known screen image and the current image,
  * then store current image back in client's SessionInfo.
  */
@@ -194,6 +295,29 @@ static void updateExistingClient (ws_cli_conn_t *client)
     // curious how long these steps take
     struct timeval tv0;
     gettimeofday (&tv0, NULL);
+
+    // sample everything that affects the sent image before any capture; the count is locked
+    // so it can not change between open and close underneath us
+    uint64_t stage_gen;
+    int nweb;
+    bool mainpage;
+    session_snapshot_state (client, &stage_gen, &nweb, &mainpage);
+
+    // if the screen and our overlay inputs are unchanged since this client's last capture then no
+    // difference can be found -- skip copying and reading the whole image, which otherwise dominate
+    // the cost of an idle update
+    if (session_capture_is_current (client, stage_gen, nweb, mainpage)) {
+        uint8_t hdr[4] = {BLOK_W, BLOK_H, 0, 0};                // same as an update with no changed regions
+        unsigned hdr_l = sizeof(hdr);
+        unsigned n_hdrsent = ws_sendframe_bin (client, (const char *) hdr, hdr_l);
+        if (n_hdrsent != hdr_l)
+            Serial.printf ("LIVE: client %s: wrong header write %u != %d\n", ws_getaddress(client), n_hdrsent, hdr_l);
+        static uint8_t no_pix[1] = {0};                         // stbi reads nothing for a 0 wide image
+        stbi_write_png_to_func (wifiSTBWrite_helper, client, 0, BLOK_H, COMP_RGB, no_pix, 0);
+        if (debugLevel (DEBUG_WEB, 2))
+            Serial.printf ("LIVE: client %s: sent update with 0 regions 0 blocks\n", ws_getaddress(client));
+        return;
+    }
 
     // use the client's pixels buffer directly, protected by a borrowed reference
     uint8_t *pixels = borrow_session_pixels(client);
@@ -208,9 +332,12 @@ static void updateExistingClient (ws_cli_conn_t *client)
     }
     memcpy (img_client, pixels, LIVE_NBYTES);
 
-    // replace client's current image with a fresh capture
-    if (!tft.getRawPix (pixels, LIVE_NPIX))
+    // replace client's current image with a fresh capture plus its exact generation, atomically,
+    // so the recorded state below really describes these pixels even if drawCanvas runs concurrently
+    uint64_t capture_gen;
+    if (!tft.getRawPixAndGen (pixels, LIVE_NPIX, &capture_gen))
         bye ("getRawPix for update failed\n");
+    stage_gen = capture_gen;
     uint8_t *img_now = pixels;
 
     if (debugLevel (DEBUG_WEB, 2)) {
@@ -221,7 +348,7 @@ static void updateExistingClient (ws_cli_conn_t *client)
     }
 
     // draw connection counter on main page
-    if (mainpage_up) {
+    if (mainpage) {
         #define CTR_RAWW (3*tft.SCALESZ)
         #define CTR_RAWH (5*tft.SCALESZ)
         #define CTR_RAWX (tft.SCALESZ*(lkscrn_b.x-4))
@@ -229,20 +356,20 @@ static void updateExistingClient (ws_cli_conn_t *client)
         SBox digit_b = {(uint16_t)CTR_RAWX, (uint16_t)CTR_RAWY, (uint16_t)CTR_RAWW, (uint16_t)CTR_RAWH};
         if (client->port == liveweb_ro_port) {
             static const uint8_t txt_clr[LIVE_BYPPIX] = {255U,50U,50U};
-            // n_roweb = 1234567890;       // RBF
-            if (n_roweb < 10)
+            // nweb = 1234567890;       // RBF
+            if (nweb < 10)
                 digit_b.x += CTR_RAWW;
-            drawImgNumber (n_roweb, img_now, digit_b, txt_clr);
+            drawImgNumber (nweb, img_now, digit_b, txt_clr);
             digit_b.x += 2*digit_b.w/3;
             drawImgR (img_now, digit_b, txt_clr);
             digit_b.x += 3*digit_b.w/2;
             drawImgO (img_now, digit_b, txt_clr);
         } else {
             static const uint8_t txt_clr[LIVE_BYPPIX] = {255U,255U,255U};
-            // n_rwweb = 1234567890;       // RBF
-            if (n_rwweb < 10)
+            // nweb = 1234567890;       // RBF
+            if (nweb < 10)
                 digit_b.x += CTR_RAWW;
-            drawImgNumber (n_rwweb, img_now, digit_b, txt_clr);
+            drawImgNumber (nweb, img_now, digit_b, txt_clr);
             digit_b.x += 2*digit_b.w/3;
             drawImgR (img_now, digit_b, txt_clr);
             digit_b.x += 3*digit_b.w/2;
@@ -250,29 +377,7 @@ static void updateExistingClient (ws_cli_conn_t *client)
         }
     }
 
-    // we only send small regions that have changed since previous, ie changes from img_client to img_now.
-    // image is divided into fixed sized blocks and those which have changed are coalesced into regions
-    // of height one block but variable length. these are collected and sent as one image of height one
-    // block preceded by a header defining the location and size of each region. the coordinates and
-    // length of a region are in units of blocks, not pixels, to reduce each value's size to one byte
-    // each in the header. smaller regions are more efficient but the coords must fit in 8 bit header value.
-    #define BLOK_W      (BUILD_W>1600?16:8)             // pixels wide
-    #define BLOK_H      8                               // pixels high
-    #define BLOK_NCOLS  (BUILD_W/BLOK_W)                // blocks in each row over entire image
-    #define BLOK_NROWS  (BUILD_H/BLOK_H)                // blocks in each col over entire image
-    #define BLOK_NPIX   (BLOK_W*BLOK_H)                 // size of 1 block, pixels
-    #define BLOK_NBYTES (BLOK_NPIX*LIVE_BYPPIX)         // size of 1 block, bytes
-    #define BLOK_WBYTES (BLOK_W*LIVE_BYPPIX)            // width of 1 block, bytes
-    #define MAX_REGNS   (BLOK_NCOLS*BLOK_NROWS)         // worse case number of regions
-    #if BLOK_NCOLS > 255                                // insure fits into uint8_t
-        #error too many block columns
-    #endif
-    #if BLOK_NROWS > 255                                // insure fits into uint8_t
-        #error too many block rows
-    #endif
-    #if MAX_REGNS > 65535                               // insure fits into uint16_t
-        #error too many live regions
-    #endif
+    // we only send small regions that have changed since previous -- see BLOK_ macros at top of file
 
     // time block creation
     gettimeofday (&tv0, NULL);
@@ -403,6 +508,9 @@ static void updateExistingClient (ws_cli_conn_t *client)
     free (chg_regns);
     free (img_client);
     return_session_pixels (pixels);
+
+    // pixels now matches the atomic capture above -- next update can skip if it is still current
+    session_record_capture (client, stage_gen, nweb, mainpage);
 }
 
 /* capture fresh screen image for client and send.
@@ -425,6 +533,9 @@ static void sendClientPNG (ws_cli_conn_t *client)
         Serial.printf ("LIVE: client %s: sent full PNG\n", ws_getaddress(client));
 
     return_session_pixels (pixels);
+
+    // pixels no longer holds the capture-plus-overlay image that updateExistingClient records
+    session_invalidate_capture (client);
 }
 
 /* send message that user wants full screen.
@@ -729,17 +840,43 @@ static void setLiveMouse (ws_cli_conn_t *client, char args[], size_t args_len)
     }
 }
 
-/* send live.html to browser on the given FILE *
+/* send all bytes over a raw socket, looping if necessary.
+ * returns true on success, false on error.
  */
-static void sendLiveHTML (FILE *sockfp)
+static bool send_all_raw (int sock, const void *buf, size_t len)
 {
-    // send proper header
-    fprintf (sockfp, "HTTP/1.0 200 OK\r\n");
-    fprintf (sockfp, "Content-Type: text/html; charset=us-ascii\r\n");
-    fprintf (sockfp, "Connection: close\r\n\r\n");
+    const char *p = (const char *) buf;
+    while (len > 0) {
+        int n = send (sock, p, (int) len, 0);
+        if (n <= 0) return (false);
+        p   += n;
+        len -= (size_t) n;
+    }
+    return (true);
+}
 
-    // send page
-    fprintf (sockfp, "%s\r\n", live_html);
+/* send live.html to browser on the given socket
+ */
+static void sendLiveHTML (int sock)
+{
+    // build the complete response in one buffer for a single send
+    size_t hdr_len = strlen ("HTTP/1.0 200 OK\r\n"
+                             "Content-Type: text/html; charset=us-ascii\r\n"
+                             "Connection: close\r\n\r\n");
+    size_t html_len = strlen (live_html);
+    size_t total = hdr_len + html_len + 2; // +2 for trailing \r\n
+    char *resp = (char *) malloc (total);
+    if (!resp) return;
+    char *p = resp;
+    memcpy (p, "HTTP/1.0 200 OK\r\n"
+               "Content-Type: text/html; charset=us-ascii\r\n"
+               "Connection: close\r\n\r\n", hdr_len);
+    p += hdr_len;
+    memcpy (p, live_html, html_len);
+    p += html_len;
+    memcpy (p, "\r\n", 2);
+    send_all_raw (sock, resp, total);
+    free (resp);
 
     if (debugLevel (DEBUG_WEB, 1))
         Serial.printf ("LIVE: sent live.html\n");
@@ -747,15 +884,22 @@ static void sendLiveHTML (FILE *sockfp)
 
 /* called when browser wants favicon.ico
  */
-static void sendLiveFavicon (FILE *sockfp)
+static void sendLiveFavicon (int sock)
 {
     // send the web page header
-    fprintf (sockfp, "HTTP/1.0 200 OK\r\n");
-    fprintf (sockfp, "Content-Type: image/x-icon\r\n");
-    fprintf (sockfp, "Connection: close\r\n\r\n");
+    size_t hdr_len = strlen ("HTTP/1.0 200 OK\r\n"
+                             "Content-Type: image/x-icon\r\n"
+                             "Connection: close\r\n\r\n");
+    char *resp = (char *) malloc (hdr_len);
+    if (!resp) return;
+    memcpy (resp, "HTTP/1.0 200 OK\r\n"
+                   "Content-Type: image/x-icon\r\n"
+                   "Connection: close\r\n\r\n", hdr_len);
+    send_all_raw (sock, resp, hdr_len);
+    free (resp);
 
     // send icon
-    writeFavicon (sockfp);
+    writeFavicon (sock);
 
     if (debugLevel (DEBUG_WEB, 1))
         Serial.printf ("LIVE: sent favicon\n");
@@ -799,6 +943,7 @@ static void ws_onopen(ws_cli_conn_t *client)
     // init including memory for pixels but don't capture until client asks for them
     if (new_sip) {
         new_sip->client = client;
+        new_sip->have_capture = false;                          // insure first update does a full capture
         new_sip->pixels = (uint8_t *) malloc (LIVE_NBYTES);
         if (!new_sip->pixels)
             bye ("No memory for new live session pixels\n");
@@ -922,9 +1067,9 @@ static void ws_onmessage (ws_cli_conn_t *client, const unsigned char *msg, uint6
 }
 
 /* called when we receive a "normal" client message, ie, one that is not from a web socket.
- * sockfp is prepared for writing and is positioned just after the header. caller will close, not us.
+ * sock is the connected socket. caller will close, not us.
  */
-static void ws_not (FILE *sockfp, const char *header)
+static void ws_not (int sock, const char *header)
 {
     // first line should be the GET containing the desired page
     char fn[50];
@@ -938,15 +1083,18 @@ static void ws_not (FILE *sockfp, const char *header)
 
     // dispatch according to GET file
     if (strcmp (fn, "live.html") == 0)
-        sendLiveHTML (sockfp);
+        sendLiveHTML (sock);
     else if (strcmp (fn, "favicon.ico") == 0)
-        sendLiveFavicon (sockfp);
+        sendLiveFavicon (sock);
     else {
         Serial.printf ("LIVE: unknown GET %s\n", fn);
-        fprintf (sockfp, "HTTP/1.0 400 Bad request\r\n");
-        fprintf (sockfp, "Content-Type: text/plain; charset=us-ascii\r\n");
-        fprintf (sockfp, "Connection: close\r\n\r\n");
-        fprintf (sockfp, "%s: not found\r\n", fn);
+        char msg[200];
+        int msgl = snprintf (msg, sizeof(msg),
+                             "HTTP/1.0 400 Bad request\r\n"
+                             "Content-Type: text/plain; charset=us-ascii\r\n"
+                             "Connection: close\r\n\r\n"
+                             "%s: not found\r\n", fn);
+        send_all_raw (sock, msg, (size_t) msgl);
     }
 }
 

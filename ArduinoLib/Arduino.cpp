@@ -17,6 +17,8 @@
 #include <sys/resource.h>
 #endif
 
+#include "hc_home.h"
+
 #include "Arduino.h"
 #include "timeout.h"
 // max cpu usage, throttle with -t
@@ -169,7 +171,16 @@ static void mvLog (const char *from, const char *to)
         std::string to_path = our_dir + to;
         const char *from_fn = from_path.c_str();
         const char *to_fn = to_path.c_str();
-        if (rename (from_fn, to_fn) < 0 && errno != ENOENT) {
+        if (rename (from_fn, to_fn) < 0) {
+            if (errno == ENOENT)
+                return;                         // nothing to roll
+            if (errno == EEXIST) {
+                // POSIX rename replaces the destination but Windows fails with
+                // EEXIST so explicitly remove it and try again
+                (void) unlink (to_fn);
+                if (rename (from_fn, to_fn) == 0 || errno == ENOENT)
+                    return;
+            }
             // fails for a reason other than from does not exist
             fprintf (stderr, "rename(%s,%s): %s\n", from_fn, to_fn, strerror(errno));
             exit(1);
@@ -203,8 +214,14 @@ static void makeDiagFile()
  */
 static std::string defaultAppDir()
 {
-        std::string home = getenv ("HOME");
-        return (home + "/.hamclock/");
+    // Windows has no HOME by default so fall back to USERPROFILE etc.
+    // Must not construct a std::string from a NULL pointer.
+    char *home = hc_get_home();
+    if (!home)
+        return ("");
+    std::string s (home);
+    free (home);
+    return (s + "/.hamclock/");
 }
 
 /* like mkdir() but checks/creates all intermediate components
@@ -292,10 +309,13 @@ static void setUsrDateTime (const char *iso8601)
         usr_datetime = mktime (&tms);
 }
 
+#ifndef _WIN32
+// used only by logSys() below, which is not compiled on Windows
 static int qsStrcmp (const void *v1, const void *v2)
 {
     return (strcmp (*(char **)v1, *(char **)v2));
 }
+#endif
 
 /* log some misc sys info
  */

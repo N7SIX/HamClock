@@ -14,6 +14,7 @@
 /hamclock-web-800x480
 /hamclock-web-1600x960
 /hamclock-fb0-*
+/mingw-web-*.exe
 zpipe
 dist/
 *.deb
