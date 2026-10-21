@@ -1,7 +1,7 @@
 name: hamclock
 title: N7SIX HamClock
 base: core24
-version: '7.6.1'
+version: '7.6.2'
 license: MIT
 summary: Space Weather, Propagation & Telemetry Dashboard
 description: |

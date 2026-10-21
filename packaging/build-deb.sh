@@ -10,7 +10,7 @@
 set -e
 
 ARCH="${1:-amd64}"
-VERSION="7.6.1"
+VERSION="7.6.2"
 REVISION="1"
 PKG_NAME="hamclock"
 OUT_DIR="${2:-./dist}"
