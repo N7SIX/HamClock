@@ -1,3 +1,4 @@
+// Copyright 2026 Sean, N7SIX
 /* simple network interface functions for unix.
  */
 
@@ -322,6 +323,7 @@ IPAddress WiFi::subnetMask(void)
 #else
 /* Android: getifaddrs/freeifaddrs not available in Bionic libc.
  * Return zero netmask (web-only mode doesn't need detailed subnet info). */
+ESP_LOGD("WiFi", "Running in Android web-only mode; interface info not available");
 return (IPAddress(0,0,0,0));
 #endif
 
@@ -528,6 +530,7 @@ int WiFi::status(void)
 #else
 /* Android: getifaddrs/freeifaddrs not available in Bionic libc.
  * Assume connected in web-only mode. */
+ESP_LOGD("WiFi", "Running in Android web-only mode; assuming connected");
 return (WL_CONNECTED);
 #endif
 }

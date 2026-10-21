@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
+# Copyright 2026 Sean, N7SIX
+# =============================================================================
 # build-apk-native.sh  —  N7SIX HamClock  —  cross-compile the native server
 # =============================================================================
 # Compiles the SAME web-only HamClock executable that the desktop/Termux builds

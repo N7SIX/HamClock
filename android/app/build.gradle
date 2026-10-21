@@ -15,12 +15,17 @@ android {
         versionName "7.6.1"
         // Needed when minSdk < 21 if dex method count ever exceeds 64k.
         multiDexEnabled true
+        // Restrict cleartext traffic on release builds; debug keeps HTTP for dev
+        usesCleartextTraffic false
     }
+
+    // Conditional cleartext traffic: debug=true for dev, release=false for Play Store compliance
+    manifestPlaceholders = [isDebug: rootProject.hasProperty('DEBUG')]
 
     buildTypes {
         release {
-            minifyEnabled false
-            shrinkResources false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             // Debug-signed so the APK is immediately installable.
             // Re-sign with your own key before publishing to an app store.
@@ -30,6 +35,8 @@ android {
             signingConfig signingConfigs.debug
         }
         debug {
+            minifyEnabled false
+            shrinkResources false
             signingConfig signingConfigs.debug
         }
     }
@@ -41,6 +48,13 @@ android {
             v1SigningEnabled true
             v2SigningEnabled true
         }
+        // Release signing config placeholder - add your keystore details here
+        // release {
+        //     storeFile file('my-release-key.jks')
+        //     storePassword 'your_keystore_password'
+        //     keyAlias 'my-key-alias'
+        //     keyPassword 'your_key_password'
+        // }
     }
 
     compileOptions {
@@ -58,10 +72,13 @@ android {
     // (libhamclock.so per-ABI under src/main/jniLibs, built by
     // packaging/build-apk-native.ps1). Android 10+ forbids execve() of files
     // in the app's data home dir, but the package manager extracts jniLibs to
-    // the executable nativeLibraryDir at install time, so we exec it from there.
+    // the executable nativeLibraryDir at install time, so we exec it from here.
     packagingOptions {
         jniLibs.useLegacyPackaging true
     }
+
+    // Only build the ABIs we need to reduce APK size and build time
+    ndk.abiFilters 'arm64-v8a', 'armeabi-v7a'
 }
 
 dependencies {
