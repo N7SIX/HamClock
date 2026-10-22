@@ -11,8 +11,8 @@
 -keep class * extends java.lang.Exception { *; }
 
 # Keep WebView-related classes
--keepclasswithmembers android.webkit.WebViewClient { *; }
--keepclasswithmembers android.webkit.WebView { *; }
+-keepclassmembers class android.webkit.WebViewClient { *; }
+-keepclassmembers class android.webkit.WebView { *; }
 
 # Keep location and permission constants
 -keep enum android.Manifest$permission { *; }

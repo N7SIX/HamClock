@@ -323,7 +323,7 @@ IPAddress WiFi::subnetMask(void)
 #else
 /* Android: getifaddrs/freeifaddrs not available in Bionic libc.
  * Return zero netmask (web-only mode doesn't need detailed subnet info). */
-ESP_LOGD("WiFi", "Running in Android web-only mode; interface info not available");
+printf("WiFi: Running in Android web-only mode; interface info not available\n");
 return (IPAddress(0,0,0,0));
 #endif
 
@@ -530,7 +530,7 @@ int WiFi::status(void)
 #else
 /* Android: getifaddrs/freeifaddrs not available in Bionic libc.
  * Assume connected in web-only mode. */
-ESP_LOGD("WiFi", "Running in Android web-only mode; assuming connected");
+printf("WiFi: Running in Android web-only mode; assuming connected\n");
 return (WL_CONNECTED);
 #endif
 }
