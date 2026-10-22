@@ -87,8 +87,16 @@ extern const GFXfont Courier_Prime_Sans6pt7b;
 
 
 
-// basic background refresh interval, usecs
+// basic background refresh interval, usecs.
+// _WEB_ONLY mode has no physical display to refresh -- the web client only
+// polls every >=100ms so there is no benefit to staging faster than 100ms.
+// _USE_X11 and _USE_FB0 modes drive a local display window that benefits from
+// the tighter 50ms cadence.
+#if defined(_WEB_ONLY)
+#define REFRESH_US      100000
+#else
 #define REFRESH_US      50000
+#endif
 
 class Adafruit_RA8875 {
 

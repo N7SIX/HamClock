@@ -101,9 +101,15 @@ char live_html[] =  R"_raw_html_(
     <script>
 
         // config
-        const UPDATE_MS = 100;          // update interval
-        const MOUSE_JITTER = 5;         // allow this much mouse motion for a touch
-        const LONGPRESS_MS = 500;       // press and hold duration in ms to trigger tooltip
+        // adaptive polling: UPDATE_MS grows while the display is static and
+        // shrinks back to MIN_UPDATE_MS when changes are detected.
+        // this reduces WebSocket traffic by up to 5x on idle map views.
+        var UPDATE_MS = 100;          // current update interval, ms
+        const MIN_UPDATE_MS = 100;    // fastest polling when display is active
+        const MAX_UPDATE_MS = 500;    // slowest polling when display is idle
+        const POINTER_THROTTLE_MS = 100; // mouse/pointer event throttle, independent of UPDATE_MS
+        const MOUSE_JITTER = 5;       // allow this much mouse motion for a touch
+        const LONGPRESS_MS = 500;     // press and hold duration in ms to trigger tooltip
         const APP_W = 800;              // app coord system width
         const nonan_chars =             // supported non-alnum chars
           ['Tab', 'Enter', 'Space', 'Escape', 'Backspace', 'ArrowLeft', 'ArrowDown', 'ArrowUp', 'ArrowRight'];
@@ -124,6 +130,7 @@ char live_html[] =  R"_raw_html_(
         var longpress_fired = false;    // whether long-press triggered tooltip
         var want_fs, tried_fs;          // whether user wants full screen and has succeeded once
         var wsclose_reload = 1;         // whether to reload if lose ws connection
+        var update_idle = 0;            // consecutive no-change polls for adaptive backoff
         var cvs, ctx;                   // handy
 
         // define functions, onLoad follows near the bottom
@@ -533,12 +540,26 @@ char live_html[] =  R"_raw_html_(
                     if (data8[0] == 137 && data8[1] == 80 && data8[2] == 78 && data8[3] == 71) {
                         // this is a PNG image -- show whole if alone else assume its part of an update
                         if (ws_abdata) {
-                            drawUpdate (new Uint8Array(ws_abdata), data8);
+                            var hdr8 = new Uint8Array(ws_abdata);
+                            var n_regn = (hdr8[2] << 8) | hdr8[3]; // changed regions in this update
+                            drawUpdate (hdr8, data8);
                             ws_abdata = 0;
+                            // adaptive polling: when regions changed, stay responsive;
+                            // when idle, back off linearly up to MAX_UPDATE_MS.
+                            if (n_regn > 0) {
+                                update_idle = 0;
+                                UPDATE_MS = MIN_UPDATE_MS;
+                            } else {
+                                update_idle++;
+                                UPDATE_MS = Math.min (MAX_UPDATE_MS, MIN_UPDATE_MS * (1 + update_idle));
+                            }
                         } else {
                             drawFullImage (data8);
                             // allow restart
                             sessionStorage.removeItem (RELOAD_KEY);
+                            // reset to fast polling after a full image load
+                            update_idle = 0;
+                            UPDATE_MS = MIN_UPDATE_MS;
                         }
                         // ask for updates regardless
                         runSoon (getUpdate);
@@ -750,9 +771,9 @@ char live_html[] =  R"_raw_html_(
                         cancelLongPress();
                 }
 
-                // not crazy fast
+                // not crazy fast -- use fixed throttle independent of update interval
                 let now = Date.now();
-                if (pointermove_ms + UPDATE_MS > now)
+                if (pointermove_ms + POINTER_THROTTLE_MS > now)
                     return;
                 pointermove_ms = now;
 
