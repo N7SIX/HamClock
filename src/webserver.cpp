@@ -4606,6 +4606,33 @@ static bool doWiFiReboot (WiFiClient &client, char *unused_line, size_t line_len
 #endif
 }
 
+
+/* factory reset, called via POST /command?cfgreset=true
+ */
+static bool doWiFiFactoryResetCmd (WiFiClient &client, char *unused_line, size_t line_len)
+{
+    (void)(unused_line);
+    (void)(line_len);
+
+    // check if screen is locked
+    if (screenIsLocked()) {
+        client.println ("Factory reset is blocked by screen lock.");
+        Serial.println ("Factory reset blocked by screen lock");
+        return (true);
+    }
+
+    // send html header then close
+    startPlainText(client);
+
+    // perform factory reset and restart
+    Serial.println ("Factory reset requested via REST command");
+    doReboot (false, true);
+
+    // never returns, but just in case
+    return (true);
+}
+
+
 /* update firmware if available
  */
 static bool doWiFiUpdate (WiFiClient &client, char *unused_line, size_t line_len)
@@ -5034,6 +5061,7 @@ static const CmdTble command_table[] = {
     { "exit ",              doWiFiExit,            "exit HamClock" },
     { "postDiags ",         doWiFiPostDiags,       "post diagnostic logs and configuration settings" },
     { "restart ",           doWiFiReboot,          "restart HamClock" },
+    { "command",            doWiFiFactoryResetCmd, "factory reset and restart" },
     { "updateVersion ",     doWiFiUpdate,          "update to latest version"},
 
     // the following entries are never shown with --help -- update N_UNDOC_CMD if change
@@ -5107,7 +5135,8 @@ static bool isPOST (const char *line)
 {
     return (strncmp (line, "POST /set_rss?", 14) == 0
             || strncmp (line, "POST /set_adif?", 15) == 0
-            || strncmp (line, "POST /set_bmp?", 14) == 0);
+            || strncmp (line, "POST /set_bmp?", 14) == 0
+            || strncmp (line, "POST /command?", 14) == 0);
 }
 
 /* return whether the given line is a valid GET command

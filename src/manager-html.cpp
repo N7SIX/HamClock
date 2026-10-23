@@ -74,9 +74,8 @@ const char manager_html[] = R"HCDB(
       if(!pw){ $('msg_err').style.display='block'; return; }
       btn.disabled=true; btn.textContent='Resetting...';
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/command?cfgreset=true', false);
-      xhr.setRequestHeader('Content-Type','application/json');
-      xhr.send(JSON.stringify({pw:pw}));
+      xhr.open('POST', '/command?cfgreset=true&pw='+encodeURIComponent(pw), false);
+      xhr.send();
       if(xhr.status===200) location.reload();
       else { $('msg_err').style.display='block'; btn.disabled=false; btn.textContent='Factory Reset'; }
     }
