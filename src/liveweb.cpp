@@ -1021,6 +1021,8 @@ static void ws_onclose (ws_cli_conn_t *client)
     // Serial.printf ("LIVE: client %s: disappeared after closing websocket\n", ws_getaddress(client));
 }
 
+static void doWiFiFactoryResetWs (ws_cli_conn_t *client, char args[], size_t args_len);
+
 /* callback when browser sends us a message on a websocket
  */
 static void ws_onmessage (ws_cli_conn_t *client, const unsigned char *msg, uint64_t size, int type)
@@ -1039,9 +1041,7 @@ static void ws_onmessage (ws_cli_conn_t *client, const unsigned char *msg, uint6
         {"set_touch?",    setLiveTouch},
         {"set_char?",     setLiveChar},
         {"get_live.png?", getLivePNG},
-        {"cfgreset?", doWiFiFactoryResetWs},
-    };
-        {"get_live.png?", getLivePNG},
+        {"cfgreset?",     doWiFiFactoryResetWs},
     };
 
     // msg as null-terminated string cmd
@@ -1235,6 +1235,7 @@ void requestLiveWebPaste (void)
 bool isLiveWebTouch (void)
 {
     return (cur_touch_live);
+}
 
 
 /* factory reset and restart, called via web socket from manager page
@@ -1255,5 +1256,4 @@ static void doWiFiFactoryResetWs (ws_cli_conn_t *client, char args[], size_t arg
 
     // never returns, but just in case
     for (;;);
-}
 }

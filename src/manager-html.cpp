@@ -83,5 +83,5 @@ const char manager_html[] = R"HCDB(
   </script>
 </body>
 </html>
-)HCDB");
+)HCDB";
 

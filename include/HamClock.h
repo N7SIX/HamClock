@@ -1985,6 +1985,7 @@ extern float nearestKD3Dist2Miles(float d);
 
 extern const char antennas_html[];
 extern const char dashboard_html[];
+extern const char manager_html[];
 
 
 

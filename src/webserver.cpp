@@ -2664,6 +2664,7 @@ static bool getWiFiDashboardGui (WiFiClient &client, char line[], size_t line_le
 	client.print (antennas_html);
 	Serial.printf ("Served antennas.html\n");
 	return (true);
+}
 
 static bool getWiFiManagerGui (WiFiClient &client, char line[], size_t line_len)
 {
@@ -2679,7 +2680,6 @@ static bool getWiFiManagerGui (WiFiClient &client, char line[], size_t line_len)
     Serial.printf ("Served manager.html\n");
     return (true);
 }
- }
 
 /*
  * remote command to list antennas
