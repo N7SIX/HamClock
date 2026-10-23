@@ -87,8 +87,16 @@ extern const GFXfont Courier_Prime_Sans6pt7b;
 
 
 
-// basic background refresh interval, usecs
+// basic background refresh interval, usecs.
+// _WEB_ONLY mode has no physical display to refresh -- the web client only
+// polls every >=100ms so there is no benefit to staging faster than 100ms.
+// _USE_X11 and _USE_FB0 modes drive a local display window that benefits from
+// the tighter 50ms cadence.
+#if defined(_WEB_ONLY)
+#define REFRESH_US      100000
+#else
 #define REFRESH_US      50000
+#endif
 
 class Adafruit_RA8875 {
 
@@ -210,6 +218,12 @@ class Adafruit_RA8875 {
         bool restoreBackingRegion (uint8_t *bs, int x0, int y0, int w, int h, int sub_y0, int sub_h);
         bool getRawPix (uint8_t *rgb24, int npix);
         bool getPixelRaw (uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
+
+        // generation number of fb_stage contents: advanced by drawCanvas() after staging,
+        // ie whenever getRawPix() could return different bytes. lets callers skip re-reading
+        // an unchanged screen. getRawPixAndGen() captures pixels and their generation atomically.
+        uint64_t getStageGen (void);
+        bool getRawPixAndGen (uint8_t *rgb24, int npix, uint64_t *genp);
 
 
         // control whether to display gray
@@ -333,6 +347,7 @@ class Adafruit_RA8875 {
 	pthread_mutex_t fb_lock;
 	struct fb_var_screeninfo fb_si;
 	volatile bool fb_dirty;
+	uint64_t fb_gen = 0;                    // fb_stage generation, advanced by drawCanvas
 	fbpix_t *fb_canvas;             // main drawing image buffer
 	fbpix_t *fb_stage;              // temp image during staging to fb hw
 	int fb_nbytes;                  // bytes in each in-memory image buffer

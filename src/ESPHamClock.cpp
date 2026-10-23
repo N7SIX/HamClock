@@ -1457,8 +1457,8 @@ static void drawVersion (bool draw)
                     Serial.printf ("found even newer upgrade version %s\n", new_version);
                 }
 
-                Serial.printf ("auto upgrading to %s %ld > %ld hour %d\n",
-                                                    new_version, now, next_check, hour(now+getTZ(de_tz)));
+                Serial.printf ("auto upgrading to %s %lld > %lld hour %d\n",
+                                                    new_version, (long long) now, (long long) next_check, hour(now+getTZ(de_tz)));
                 if (askOTAupdate (new_version, true, true) && askPasswd ("upgrade", false))
                     doOTAupdate(new_version);               // never returns
 

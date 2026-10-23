@@ -4,7 +4,7 @@
 
 ### *The Quintessential Space Weather, Radio Propagation & Telemetry Dashboard for Amateur Radio*
 
-[![HamClock Version](https://img.shields.io/badge/version-7.6.1-blue.svg?style=for-the-badge&logo=cplusplus)](file:///home/x/ESPHamClock/version.cpp)
+[![HamClock Version](https://img.shields.io/badge/version-7.6.2-blue.svg?style=for-the-badge&logo=cplusplus)](file:///home/x/ESPHamClock/version.cpp)
 [![Backend Status](https://img.shields.io/badge/backend-N7SIX%20HamClock%20Backend-brightgreen.svg?style=for-the-badge&logo=server)](http://n7six-hamclock.duckdns.org)
 [![AUR package](https://img.shields.io/aur/version/hamclock-git?color=1793D1&label=AUR&logo=archlinux&style=for-the-badge)](https://aur.archlinux.org/packages/hamclock-git)
 [![Snap Store](https://img.shields.io/badge/Snap%20Store-Stable-E95420.svg?style=for-the-badge&logo=snapcraft&logoColor=white)](https://snapcraft.io/hamclock)
@@ -58,7 +58,7 @@ With Elwood Downey becoming **Silent Key (SK)**, the original Clear Sky Institut
 
 To ensure HamClock remains fully functional, reliable, and open for future generations of radio operators, an international collective of amateur radio enthusiasts developed the **N7SIX HamClock Backend**.
 
-### What Changed in Version 4.24+ (Current: 7.6.1)
+### What Changed in Version 4.24+ (Current: 7.6.2)
 
 - **Hard-Coded Community Backend**: HamClock connects to the community backend `ohb.hamclock.app:80` by default, with the cosmetic on-screen label `n7six.hamclock.app`. The N7SIX backend (`n7six-hamclock.duckdns.org:80`) is the designated self-hosted target.
 - **No Switching Scripts or DNS Redirection Required**: Older transitional scripts (`sudo ohb`, `sudo fix-hosts`, `sudo csi`) and manual `/etc/hosts` modifications are no longer required.
@@ -255,25 +255,25 @@ paru -S hamclock-git
 ### ?? Debian / Ubuntu / Raspberry Pi OS (`.deb`)
 ```bash
 # Download and install for your architecture
-sudo dpkg -i hamclock_7.6.1-1_amd64.deb    # x86_64 PCs
-sudo dpkg -i hamclock_7.6.1-1_arm64.deb    # Raspberry Pi 4/5 / 64-bit ARM
-sudo dpkg -i hamclock_7.6.1-1_armhf.deb    # Raspberry Pi 2/3 / 32-bit Raspbian
+sudo dpkg -i hamclock_7.6.2-1_amd64.deb    # x86_64 PCs
+sudo dpkg -i hamclock_7.6.2-1_arm64.deb    # Raspberry Pi 4/5 / 64-bit ARM
+sudo dpkg -i hamclock_7.6.2-1_armhf.deb    # Raspberry Pi 2/3 / 32-bit Raspbian
 sudo apt-get install -f                   # Resolve any missing dependencies
 ```
 
 ### ?? Fedora / RHEL / openSUSE (`.rpm`)
 ```bash
-sudo rpm -Uvh hamclock-7.6.1-1.x86_64.rpm  # x86_64
-sudo rpm -Uvh hamclock-7.6.1-1.aarch64.rpm # ARM64
+sudo rpm -Uvh hamclock-7.6.2-1.x86_64.rpm  # x86_64
+sudo rpm -Uvh hamclock-7.6.2-1.aarch64.rpm # ARM64
 ```
 
 ### ?? Universal AppImage (Single-File Executable)
 ```bash
-chmod +x HamClock-7.6.1-x86_64.AppImage
-./HamClock-7.6.1-x86_64.AppImage
+chmod +x HamClock-7.6.2-x86_64.AppImage
+./HamClock-7.6.2-x86_64.AppImage
 
 # Launch with custom resolution
-./HamClock-7.6.1-x86_64.AppImage -r 1600x960
+./HamClock-7.6.2-x86_64.AppImage -r 1600x960
 ```
 
 ---
@@ -284,14 +284,14 @@ HamClock now builds as a **native Windows `.exe`** - no WSL, Docker, or X11 requ
 
 ### Option A: Download Pre-Built .exe from GitHub Releases
 
-Download the latest `HamClock-7.6.1-windows-*.exe` from the [GitHub Releases page](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/releases). Four resolutions are available:
+Download the latest `HamClock-7.6.2-windows-*.exe` from the [GitHub Releases page](https://github.com/9M2PJU/9M2PJU-HamClock-Installer/releases). Four resolutions are available:
 
 | Executable File | Resolution | Recommended Use |
 | :--- | :---: | :--- |
-| `HamClock-7.6.1-windows-800x480.exe` | 800 � 480 | Standard, smaller displays |
-| `HamClock-7.6.1-windows-1600x960.exe` | 1600 � 960 | Large, recommended default |
-| `HamClock-7.6.1-windows-2400x1440.exe` | 2400 � 1440 | Hi-DPI |
-| `HamClock-7.6.1-windows-3200x1920.exe` | 3200 � 1920 | 4K UHD |
+| `HamClock-7.6.2-windows-800x480.exe` | 800 � 480 | Standard, smaller displays |
+| `HamClock-7.6.2-windows-1600x960.exe` | 1600 � 960 | Large, recommended default |
+| `HamClock-7.6.2-windows-2400x1440.exe` | 2400 � 1440 | Hi-DPI |
+| `HamClock-7.6.2-windows-3200x1920.exe` | 3200 � 1920 | 4K UHD |
 
 Run the `.exe` from Command Prompt or PowerShell, then open `http://localhost:8081/live.html` in any browser. No installation required - the executable is statically linked and only depends on Windows system DLLs.
 
@@ -311,7 +311,7 @@ make mingw-all-web
 make mingw-web-800x480
 ```
 
-Copy the resulting `HamClock-7.6.1-windows-*.exe` to your Windows machine and run it.
+Copy the resulting `HamClock-7.6.2-windows-*.exe` to your Windows machine and run it.
 
 ### Option C: PowerShell Installer (WSL2 or Docker)
 

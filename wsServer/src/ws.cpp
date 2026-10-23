@@ -446,15 +446,16 @@ char *ws_getaddress(ws_cli_conn_t *client)
  */
 int ws_sendframe(ws_cli_conn_t *client, const char *msg, uint64_t size, int type)
 {
-	unsigned char *response; /* Response data.     */
-	unsigned char frame[10]; /* Frame.             */
-	uint8_t idx_first_rData; /* Index data.        */
-	uint64_t length;         /* Message length.    */
-	int idx_response;        /* Index response.    */
-	ssize_t output;          /* Bytes sent.        */
-	ssize_t send_ret;        /* Ret send function  */
-	uint64_t i;              /* Loop index.        */
-	ws_cli_conn_t *cli;      /* Client.            */
+	unsigned char *response;    /* Response data.     */
+	unsigned char frame[10];    /* Frame.             */
+	uint8_t idx_first_rData;    /* Index data.        */
+	uint64_t length;            /* Message length.    */
+	int idx_response;           /* Index response.    */
+	ssize_t output;             /* Bytes sent.        */
+	ssize_t send_ret;           /* Ret send function  */
+	uint64_t i;                 /* Loop index.        */
+	ws_cli_conn_t *cli;         /* Client.            */
+	unsigned char stack_resp[512];  /* Small frame buf to avoid malloc */
 
 	frame[0] = (WS_FIN | type);
 	length = (uint64_t)size;
@@ -490,26 +491,23 @@ int ws_sendframe(ws_cli_conn_t *client, const char *msg, uint64_t size, int type
 		idx_first_rData = 10;
 	}
 
-	/* Add frame bytes. */
+	/* Assemble frame bytes then data bytes; use stack for small frames. */
 	idx_response = 0;
-	response = (unsigned char *) malloc(sizeof(unsigned char) * (idx_first_rData + length + 1));
-	if (!response)
-		return (-1);
-
-	for (i = 0; i < idx_first_rData; i++)
+	size_t resp_len = (size_t)idx_first_rData + (size_t)length + 1;   /* +1 for EOS */
+	if (resp_len <= sizeof(stack_resp))
+		response = stack_resp;
+	else
 	{
-		response[i] = frame[i];
-		idx_response++;
+		response = (unsigned char *) malloc(sizeof(unsigned char) * resp_len);
+		if (!response)
+			return (-1);
 	}
 
-	/* Add data bytes. */
-	for (i = 0; i < length; i++)
-	{
-		response[idx_response] = msg[i];
-		idx_response++;
-	}
-
-	response[idx_response] = '\0';
+	memcpy (response, frame, idx_first_rData);
+	if (length > 0)
+		memcpy (response + idx_first_rData, msg, (size_t)length);
+	response[idx_first_rData + length] = '\0';
+	idx_response = (int)((size_t)idx_first_rData + (size_t)length);
 
 	/* Send to the client if there is one. */
 	output = 0;
@@ -538,7 +536,8 @@ int ws_sendframe(ws_cli_conn_t *client, const char *msg, uint64_t size, int type
 		pthread_mutex_unlock(&mutex);
 	}
 
-	free(response);
+	if (response != stack_resp)
+		free(response);
 	return ((int)(output - idx_first_rData));
 }
 
@@ -1369,7 +1368,7 @@ static int readHTTPHeader (int sock, char **header)
         /* this is not efficient but we must read one char at a time to insure sock is
          * left positioned just after the blank line.
          */
-        while (found == -1 && read (sock, &hdr[n_hdr], 1) == 1) {
+        while (found == -1 && recv (sock, &hdr[n_hdr], 1, 0) == 1) {
             n_hdr++;
             if (n_hdr == n_malloc - 1)          /* also need room for final \0 */
                 hdr = (char *) realloc (hdr, (n_malloc += 1000));
@@ -1415,12 +1414,9 @@ static void *ws_establishconnection(void *vclient)
 	/* Do handshake else assume normal http request */
 	if (do_handshake(&wfd) < 0) {
             if (cli_events.onnonws) {
-                FILE *sockfp = fdopen (client->client_sock, "w");
-                (*cli_events.onnonws) (sockfp, client->header);
+                (*cli_events.onnonws) (client->client_sock, client->header);
                 /* want shutdown() first, then more closes are harmless */
-                fflush(sockfp);
                 close_socket(client->client_sock);
-                fclose (sockfp);
             }
             goto closed;
         }

@@ -1,3 +1,4 @@
+// Copyright 2026 Sean, N7SIX
 /* simple network interface functions for unix.
  */
 
@@ -294,6 +295,7 @@ IPAddress WiFi::subnetMask(void)
         if (a[0] != 0)
             return (a);
 
+#ifndef __ANDROID__
 	// get list of all interfaces
 	struct ifaddrs *ifp0;
 	if (getifaddrs(&ifp0) < 0) {
@@ -318,6 +320,12 @@ IPAddress WiFi::subnetMask(void)
 
 	// free list
 	freeifaddrs (ifp0);
+#else
+/* Android: getifaddrs/freeifaddrs not available in Bionic libc.
+ * Return zero netmask (web-only mode doesn't need detailed subnet info). */
+printf("WiFi: Running in Android web-only mode; interface info not available\n");
+return (IPAddress(0,0,0,0));
+#endif
 
 	return (a);
 }
@@ -496,6 +504,7 @@ bool WiFi::RSSI(int &value, bool &is_dbm)
 
 int WiFi::status(void)
 {
+#ifndef __ANDROID__
 	// get list of all interfaces
 	struct ifaddrs *ifp0;
 	if (getifaddrs(&ifp0) < 0) {
@@ -518,11 +527,12 @@ int WiFi::status(void)
 
 	// always free list
 	freeifaddrs (ifp0);
-
-	// return result code
-        if (!ok)
-            printf ("no net connections\n");
-	return (ok ? WL_CONNECTED : WL_OTHER);
+#else
+/* Android: getifaddrs/freeifaddrs not available in Bionic libc.
+ * Assume connected in web-only mode. */
+printf("WiFi: Running in Android web-only mode; assuming connected\n");
+return (WL_CONNECTED);
+#endif
 }
 
 int WiFi::mode (int m)

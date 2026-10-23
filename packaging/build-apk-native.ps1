@@ -47,7 +47,7 @@ foreach ($t in @($CLANG,$CLANG_C,$STRIP)) { if (-not (Test-Path $t)) { throw "Mi
 # base clang++.exe directly and pass the target + sysroot explicitly.
 # NDK r26 floor: 64-bit needs 21+, 32-bit needs 19+ (armeabi-v7a/x86). Request
 # 17 but clamp so an old requested API can never pick a missing sysroot.
-$MinApi = @{ 'arm64-v8a' = 21; 'x86_64' = 21; 'armeabi-v7a' = 19; 'x86' = 19 }[$Abi]
+$MinApi = @{ 'arm64-v8a' = 21; 'x86_64' = 21; 'armeabi-v7a' = 21; 'x86' = 21 }[$Abi]
 if ([int]$Api -lt $MinApi) { $Api = "$MinApi" }
 $TARGET  = "${triple}${Api}"
 $SYSROOT = Join-Path $BIN '..\sysroot'

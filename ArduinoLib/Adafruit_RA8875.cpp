@@ -876,20 +876,47 @@ bool Adafruit_RA8875::restoreBackingRegion (uint8_t *backing_store, int x0, int 
         return (true);
 }
 
+/* return the fb_stage generation number, ie the number of times drawCanvas has
+ * staged different pixels. the live web server uses this to skip re-reading an
+ * unchanged screen.
+ */
+uint64_t Adafruit_RA8875::getStageGen (void)
+{
+        pthread_mutex_lock (&fb_lock);
+        uint64_t gen = fb_gen;
+        pthread_mutex_unlock (&fb_lock);
+        return (gen);
+}
+
 /* return pixels as packed RGB bytes
+ * N.B. we take fb_lock so the copy is atomic wrt drawCanvas().
  */
 bool Adafruit_RA8875::getRawPix(uint8_t *rgb24, int npix)
+{
+        uint64_t dummy;
+        return (getRawPixAndGen (rgb24, npix, &dummy));
+}
+
+/* capture pixels and their stage generation atomically.
+ * the generation is advanced only when drawCanvas() stages different pixels so a caller
+ * that captures both under one lock knows the pixels really belong to the generation.
+ */
+bool Adafruit_RA8875::getRawPixAndGen(uint8_t *rgb24, int npix, uint64_t *genp)
 {
         if (npix != FB_XRES * FB_YRES) {
             ::printf ("getRawPix: %d != %d\n", npix, FB_XRES * FB_YRES);
             return (false);
         }
+        pthread_mutex_lock (&fb_lock);
         for (int i = 0; i < npix; i++) {
             uint32_t p32 = FBPIXTORGB32(fb_stage[i]);
             *rgb24++ = p32 >> 16;
             *rgb24++ = p32 >> 8;
             *rgb24++ = p32;
         }
+        if (genp)
+            *genp = fb_gen;
+        pthread_mutex_unlock (&fb_lock);
         return (true);
 }
 
@@ -2010,6 +2037,11 @@ void Adafruit_RA8875::drawCanvas()
             // let server catch up before next loop
             XSync (display, false);
         }
+
+        // stage changed -- mark a new generation so getRawPix() readers
+        // know a newer capture is required
+        if (any_change)
+            fb_gen++;
 }
 
 // _USE_X11
@@ -2576,6 +2608,7 @@ void Adafruit_RA8875::fbThread ()
 // _WEB_ONLY
 void Adafruit_RA8875::drawCanvas()
 {
+        uint64_t gen0 = fb_gen;                         // advance at most once if anything changes
         for (int y = 0; y < FB_YRES; y++) {
 
             // we assume protected region is at lower right
@@ -2591,7 +2624,15 @@ void Adafruit_RA8875::drawCanvas()
                 if (x >= max_x && y >= max_y)
                     continue;
 
-                stage_p[x] = canvas_p[x];
+                if (stage_p[x] != canvas_p[x])
+                    stage_p[x] = canvas_p[x];
+                else
+                    continue;
+
+                // a pixel changed -- count this staging as a new generation
+                // at most once per drawCanvas
+                if (fb_gen == gen0)
+                    fb_gen = gen0 + 1;
             }
         }
 }
@@ -3008,12 +3049,19 @@ void Adafruit_RA8875::setCursorIfVis (uint16_t row, uint16_t col, fbpix_t color)
 // _USE_FB0
 void Adafruit_RA8875::drawCanvas()
 {
-        // put only the unproteced region unless pr_draw is set
+        // put only the unproteced region unless pr_draw is set.
+        // advance the stage generation only if some staged pixel really changes,
+        // which the live web server uses to skip re-reading an unchanged screen.
         if (pr_draw) {
             // draw everything
-            memcpy (fb_stage, fb_canvas, fb_nbytes);
+            if (memcmp (fb_stage, fb_canvas, fb_nbytes) != 0) {
+                memcpy (fb_stage, fb_canvas, fb_nbytes);
+                fb_gen++;
+            }
         } else {
-            // draw only around the protected area
+            // draw only around the protected area, bumping the generation
+            // only if some staged pixel really changes
+            uint64_t gen0 = fb_gen;
             uint16_t bw = FB_XRES*BYTESPFBPIX;                                  // bytes wide
             uint16_t pr_r = pr_x + pr_w;                                        // right of PR
             uint16_t pr_b = pr_y + pr_h;                                        // bottom of PR
@@ -3021,12 +3069,26 @@ void Adafruit_RA8875::drawCanvas()
             fbpix_t *c_row = fb_canvas;                                         // next canvas row
             for (uint16_t y = 0; y < FB_YRES; y++, c_row += FB_XRES, s_row += FB_XRES) {
                 if (y < pr_y) {
-                    memcpy (s_row, c_row, bw);                                  // above
+                    if (memcmp (s_row, c_row, bw) != 0) {                    // above
+                        memcpy (s_row, c_row, bw);
+                        fb_gen = gen0 + 1;
+                    }
                 } else if (y < pr_b) {
-                    memcpy (s_row, c_row, pr_x*BYTESPFBPIX);                    // left
-                    memcpy (s_row+pr_r, c_row+pr_r, (FB_XRES-pr_r)*BYTESPFBPIX);// right
+                    size_t left_n = pr_x*BYTESPFBPIX;                       // left
+                    if (memcmp (s_row, c_row, left_n) != 0) {
+                        memcpy (s_row, c_row, left_n);
+                        fb_gen = gen0 + 1;
+                    }
+                    size_t right_n = (FB_XRES-pr_r)*BYTESPFBPIX;             // right
+                    if (memcmp (s_row+pr_r, c_row+pr_r, right_n) != 0) {
+                        memcpy (s_row+pr_r, c_row+pr_r, right_n);
+                        fb_gen = gen0 + 1;
+                    }
                 } else {
-                    memcpy (s_row, c_row, bw);                                  // below
+                    if (memcmp (s_row, c_row, bw) != 0) {                    // below
+                        memcpy (s_row, c_row, bw);
+                        fb_gen = gen0 + 1;
+                    }
                 }
             }
         }

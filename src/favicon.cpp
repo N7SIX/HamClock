@@ -265,9 +265,17 @@ static uint8_t favicon[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-void writeFavicon (FILE *fp)
+void writeFavicon (int sock)
 {
-    fwrite (favicon, 1, sizeof(favicon), fp);
+    // send all bytes, looping if necessary
+    const char *p = (const char *) favicon;
+    size_t len = sizeof(favicon);
+    while (len > 0) {
+        int n = send (sock, p, (int) len, 0);
+        if (n <= 0) return;
+        p   += n;
+        len -= (size_t) n;
+    }
 }
 
 #endif

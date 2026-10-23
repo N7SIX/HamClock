@@ -10,7 +10,7 @@
 set -e
 
 RPM_ARCH="${1:-x86_64}"
-VERSION="7.6.1"
+VERSION="7.6.2"
 OUT_DIR="${2:-./dist}"
 TOP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 

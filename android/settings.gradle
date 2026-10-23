@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "N7SIX HamClock"
+rootProject.name = 'HamClock'
 include ':app'

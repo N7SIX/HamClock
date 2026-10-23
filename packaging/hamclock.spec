@@ -1,5 +1,5 @@
 Name:           hamclock
-Version:        7.6.1
+Version:        7.6.2
 Release:        1%{?dist}
 Summary:        Portable space weather, propagation and telemetry dashboard for radio amateurs
 License:        MIT

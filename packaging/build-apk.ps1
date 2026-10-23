@@ -18,7 +18,7 @@
 param(
     [string[]]$Abis = @('arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86'),
     [string]$Repo = 'C:\Users\sebue\Documents\N7SIX\Software\HamClock',
-    [string]$Version = '7.6.1',
+    [string]$Version = '7.6.2',
     [switch]$SkipNative
 )
 $ErrorActionPreference = 'Stop'

@@ -2,6 +2,7 @@
  */
 
 #include "HamClock.h"
+#include "hc_home.h"
 
 
 /* string hash, commonly referred to as djb2
@@ -298,21 +299,24 @@ bool expandENV (const char *fn, char *with_env, size_t max_len)
         } else if (*fn_walk == '~') {
 
             // expand ~ as $HOME
-            char *home = getenv ("HOME");
+            char *home = hc_get_home();
             if (!home) {
                 Serial.printf ("ENV: no HOME to expand %s\n", fn);
                 return (false);
             }
 
             // copy to with_env
-            while (*home != '\0') {
+            char *hp = home;
+            while (*hp != '\0') {
                 if (with_len < max_len - 1)
-                    with_env[with_len++] = *home++;
+                    with_env[with_len++] = *hp++;
                 else {
                     Serial.printf ("ENV: expanding ~ in %s exceeds max %ld\n", fn, (long)max_len);
+                    free (home);
                     return (false);
                 }
             }
+            free (home);
 
         } else {
 

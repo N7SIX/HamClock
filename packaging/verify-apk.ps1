@@ -28,7 +28,7 @@ if (Test-Path $oa) {
 
 Write-Output ''
 Write-Output '=== 3. dist APK ==='
-$dist = Join-Path $Repo 'dist\n7six.HamClock.v7.6.1.apk'
+$dist = Join-Path $Repo 'dist\n7six.HamClock.v7.6.2.apk'
 $di = Get-Item $dist
 Write-Output ("dist APK: {0} bytes, {1}" -f $di.Length, $di.LastWriteTime)
 Write-Output ("SHA256: {0}" -f (Get-FileHash $dist -Algorithm SHA256).Hash)
@@ -40,9 +40,9 @@ foreach ($abi in @('arm64-v8a','armeabi-v7a','x86_64','x86')) {
     if (Test-Path $so) {
         $si = Get-Item $so
         $raw = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($so))
-        $has761 = $raw.Contains('7.6.1')
+        $has761 = $raw.Contains('7.6.2')
         $has432 = $raw.Contains('4.32')
-        Write-Output ("{0}: {1} bytes, {2}  has '7.6.1': {3}  has '4.32': {4}" -f $abi, $si.Length, $si.LastWriteTime, $has761, $has432)
+        Write-Output ("{0}: {1} bytes, {2}  has '7.6.2': {3}  has '4.32': {4}" -f $abi, $si.Length, $si.LastWriteTime, $has761, $has432)
     } else { Write-Output "${abi}: MISSING" }
 }
 
@@ -58,7 +58,7 @@ try {
             $s.CopyTo($ms)
             $s.Close()
             $raw = [Text.Encoding]::ASCII.GetString($ms.ToArray())
-            Write-Output ("{0}: has '7.6.1' = {1}, has '4.32' = {2}" -f $e.FullName, $raw.Contains('7.6.1'), $raw.Contains('4.32'))
+            Write-Output ("{0}: has '7.6.2' = {1}, has '4.32' = {2}" -f $e.FullName, $raw.Contains('7.6.2'), $raw.Contains('4.32'))
         }
     }
     # versionName via manifest is binary XML; try aapt if available

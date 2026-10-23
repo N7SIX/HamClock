@@ -72,7 +72,7 @@ bool checkUserGuideTouch (SCoord &s)
     pb.h += 2 * UG_HIT_PAD;
 
     if (inBox (s, pb)) {
-        showQRCodeModal (USER_GUIDE_URL, "N7SIX HamClock User Guide v7.6.1", "Scan with phone or open below", "Open Guide");
+        showQRCodeModal (USER_GUIDE_URL, "N7SIX HamClock User Guide v7.6.2", "Scan with phone or open below", "Open Guide");
         return (true);
     }
     return (false);

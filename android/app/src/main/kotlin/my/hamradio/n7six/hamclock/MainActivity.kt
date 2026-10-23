@@ -772,7 +772,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (conn.responseCode in 200..499) { conn.inputStream.close(); return true }
                 conn.disconnect()
-            } catch (e: Exception) { /* not up yet */ }
+            } catch (e: Exception) {
+                Log.d(TAG, "waitForServer: port $RW_PORT not yet open (${e.message})")
+            }
             Thread.sleep(300)
         }
         return false
