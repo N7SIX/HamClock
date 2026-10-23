@@ -8,7 +8,7 @@
 
 #include "HamClock.h"
 
-#define USER_GUIDE_URL "https://ohb.hamclock.app/ham/HamClock/HamClockUserGuide.pdf"
+#define USER_GUIDE_URL "https://raw.githubusercontent.com/N7SIX/HamClock/main/docs/HamClock%20User%20Guide.pdf"
 
 // Icon geometry: 14x14 box, positioned underneath the MOTD mailbox icon
 #define UG_ICON_W 14
