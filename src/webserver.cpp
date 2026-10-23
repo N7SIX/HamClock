@@ -2664,6 +2664,21 @@ static bool getWiFiDashboardGui (WiFiClient &client, char line[], size_t line_le
 	client.print (antennas_html);
 	Serial.printf ("Served antennas.html\n");
 	return (true);
+
+static bool getWiFiManagerGui (WiFiClient &client, char line[], size_t line_len)
+{
+    (void)(line);
+    (void)(line_len);
+
+    client.println ("HTTP/1.0 200 OK");
+    sendUserAgent (client);
+    client.println ("Content-Type: text/html; charset=utf-8");
+    client.println ("Cache-Control: no-store");
+    client.println ("Connection: close\r\n");
+    client.print (manager_html);
+    Serial.printf ("Served manager.html\n");
+    return (true);
+}
  }
 
 /*
@@ -4955,6 +4970,8 @@ typedef struct {
 } CmdTble;
 static const CmdTble command_table[] = {
     { "antennas.html ",     getWiFiAntennasGui,    "antennas widget to administer antenna information" },	
+
+    { "manager.html ",  getWiFiManagerGui,      "manage configurations, reset to factory defaults, restart" },
     { "dashboard.html ",    getWiFiDashboardGui,   "mobile dashboard for HamClock REST data" },
     { "get_antennas.txt ",  getWiFiAntennas,       "Get antenna information from hamclock and backend" },
     { "get_capture.bmp ",   getWiFiCaptureBMP,     "get live screen shot in bmp format" },
