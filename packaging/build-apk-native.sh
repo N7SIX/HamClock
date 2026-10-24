@@ -69,7 +69,7 @@ trap 'rm -rf "$BUILD"' EXIT
 #  -D_WEB_ONLY           headless web server (no X11/framebuffer)
 #  -D_CLOCK_1600x960     resolution (via RES)
 INC="-I$REPO/include -I$REPO/src -I$REPO/ArduinoLib -I$REPO/wsServer/include -I$REPO/zlib-hc -I$REPO"
-CXXFLAGS="-std=c++17 -O2 -g -fPIC -pthread -D_WEB_ONLY -D_CLOCK_${RES} $INC -Wno-unused-function"
+CXXFLAGS="-std=c++17 -O2 -g -fPIC -pthread -D_WEB_ONLY -D__ANDROID__ -D_CLOCK_${RES} $INC -Wno-unused-function"
 
 echo ">> Building native server for ABI=$ABI  target=$TRIPLE  API=$API"
 echo "   NDK=$NDK"

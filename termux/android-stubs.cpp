@@ -45,12 +45,18 @@ void android_request_exit(void)
 /* Re-launch ourselves so HamClock restarts with fresh state.
  * minus_K mirrors the upstream "keep showing splash/keep settings" flag; when
  * set we simply relaunch without any special flag. */
-void android_request_restart(bool minus_K)
+void android_request_restart(bool minus_K, bool minus_0)
 {
     (void)minus_K;
     if (g_progpath[0]) {
-        /* Replace this process image with a fresh copy of the same binary. */
-        char *const argv[] = { g_progpath, nullptr };
+        /* Replace this process image with a fresh copy of the same binary.
+         * Pass "-0" when minus_0 is set so the restarted process deletes its
+         * EEPROM storage (factory reset) before reinitializing via defaultState(). */
+        char *const argv[] = {
+            g_progpath,
+            minus_0 ? (char *)"-0" : nullptr,
+            nullptr,
+        };
         execv(g_progpath, argv);
     }
     /* If execv failed, fall back to a clean exit. */
@@ -99,6 +105,17 @@ bool android_get_clipboard(char *buf, size_t buf_len)
 {
     if (buf && buf_len) buf[0] = '\0';
     return false;
+}
+
+/* Provide random() and srandom() for older Android Bionic libc (API 17) */
+long random(void)
+{
+    return rand();
+}
+
+void srandom(unsigned int seed)
+{
+    srand(seed);
 }
 
 } /* extern "C" */

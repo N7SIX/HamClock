@@ -142,7 +142,7 @@ void delay (uint32_t ms)
 
 long random(int max)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__ANDROID__)
         return (((long)rand() >> 3) % max);
 #else
         return ((::random() >> 3) % max);
@@ -151,7 +151,7 @@ long random(int max)
 
 void randomSeed (int s)
 {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__ANDROID__)
     srand(s);
 #else
     ::srandom(s);

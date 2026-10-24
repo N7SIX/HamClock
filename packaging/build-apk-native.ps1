@@ -63,7 +63,7 @@ $inc = @(
 ) -join ' '
 $CXXFLAGS = @(
     '-std=c++17', '-O2', '-g', '-fPIC', '-pthread',
-    '-D_WEB_ONLY', "-D_CLOCK_$Res", $inc, '-Wno-unused-function'
+    '-D_WEB_ONLY', '-D__ANDROID__', "-D_CLOCK_$Res", $inc, '-Wno-unused-function'
 ) -join ' '
 
 Write-Output ">> ABI=$Abi  triple=$triple  API=$Api  res=$Res"

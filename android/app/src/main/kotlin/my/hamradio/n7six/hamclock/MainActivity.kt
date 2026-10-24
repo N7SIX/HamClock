@@ -260,21 +260,11 @@ class MainActivity : AppCompatActivity() {
                 // getenv("HOME")` during startup (ArduinoLib/Arduino.cpp), which
                 // throws std::logic_error and crashes the process if HOME is
                 // unset (as it is on Android). Point it at the app's private dir.
-                // First-run auto-location: on the very first launch the config
-                // dir (~/.hamclock/) does not exist yet. In that case add "-g -k"
-                // so the server geolocates the device's Latitude/Longitude from its
-                // public IP and skips the manual setup screen -- beginners never
-                // have to enter raw coordinates. geolocateIP() also fills in the
-                // Maidenhead grid and timezone. Later launches omit the flags so a
-                // location the user sets by hand is never overwritten by a fresh
-                // IP lookup. (N.B. -k is required by -g; see ArduinoLib/Arduino.cpp)
-                val firstRun = !File(filesDir, ".hamclock").exists()
+                // Launch without auto-geolocation flags. The user sets their
+                // location in HamClock's setup screen if needed. Avoids blocking
+                // on IP geolocation when the device has no internet, which would
+                // prevent the server from ever opening port 8081.
                 val cmd = mutableListOf(bin.absolutePath)
-                if (firstRun) {
-                    cmd += "-g"   // auto-locate DE lat/long/grid/tz from public IP
-                    cmd += "-k"   // required by -g; skip the manual setup screen
-                    Log.i(TAG, "first run: launching with -g -k (IP auto-geolocation)")
-                }
                 val pb = ProcessBuilder(*cmd.toTypedArray())
                     .directory(filesDir)
                     .redirectErrorStream(true)
@@ -443,6 +433,18 @@ class MainActivity : AppCompatActivity() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             return proxyLocalRequest(request.url.toString())
         }
+
+        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+            val url = request.url?.toString() ?: ""
+            if (isLocalHamClockUrl(url)) {
+                Log.i(TAG, "Local server connection lost/restarting ($url), auto-reconnecting...")
+                thread {
+                    if (waitForServer(30_000)) {
+                        runOnUiThread { view.loadUrl(URL_TO_LOAD) }
+                    }
+                }
+            }
+        }
     }
 
     /** API 17-20: legacy String overloads only (no WebResourceRequest refs). */
@@ -461,6 +463,19 @@ class MainActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
             return proxyLocalRequest(url)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onReceivedError(view: WebView, errorCode: Int, description: String?, failingUrl: String?) {
+            val url = failingUrl ?: ""
+            if (isLocalHamClockUrl(url)) {
+                Log.i(TAG, "Legacy Local server connection lost/restarting ($url), auto-reconnecting...")
+                thread {
+                    if (waitForServer(30_000)) {
+                        runOnUiThread { view.loadUrl(URL_TO_LOAD) }
+                    }
+                }
+            }
         }
     }
 
@@ -753,14 +768,22 @@ class MainActivity : AppCompatActivity() {
      * No per-ABI selection is needed here â€” the OS already placed the right ABI.
      */
     private fun nativeServerFile(): File {
-        val f = File(applicationInfo.nativeLibraryDir, "libhamclock.so")
-        if (!f.exists()) {
+        val src = File(applicationInfo.nativeLibraryDir, "libhamclock.so")
+        if (!src.exists()) {
             throw IllegalStateException(
-                "native server binary missing: ${f.absolutePath} " +
+                "native server binary missing: ${src.absolutePath} " +
                     "(nativeLibraryDir=${applicationInfo.nativeLibraryDir})"
             )
         }
-        return f
+        // Copy binary to filesDir and make it executable.
+        // On Android the nativeLibraryDir is not executable via execve() from
+        // the app's data directory, so we copy to filesDir where we can set
+        // proper permissions.
+        val dst = File(filesDir, "hamclock")
+        dst.parentFile.mkdirs()
+        dst.writeBytes(Files.readAllBytes(src.toPath()))
+        dst.setExecutable(true)
+        return dst
     }
 
     private fun waitForServer(timeoutMs: Long = 20_000): Boolean {

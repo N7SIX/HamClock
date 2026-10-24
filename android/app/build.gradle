@@ -7,9 +7,9 @@ android {
 
     defaultConfig {
         applicationId "my.hamradio.n7six.hamclock"
-        // API 17 = Android 4.2.2 (Jelly Bean MR1). One universal APK installs
-        // from 4.2.2 up to Android 15 (targetSdk 34).
-        minSdk 17
+        // API 19 = Android 4.4 (KitKat). Starting from 4.4, we have better
+        // support for native libraries and permissions.
+        minSdk 19
         targetSdk 34
         versionCode 762
         versionName "7.6.2"
@@ -58,7 +58,7 @@ android {
     }
 
     compileOptions {
-        // Java 8 bytecode runs everywhere from API 17 up. Building with
+        // Java 8 bytecode runs everywhere from API 19 up. Building with
         // Java 17 bytecode would still install but can hit VerifyError /
         // desugaring gaps on 4.x, so stay on 1.8 for max compatibility.
         sourceCompatibility JavaVersion.VERSION_1_8
