@@ -260,21 +260,11 @@ class MainActivity : AppCompatActivity() {
                 // getenv("HOME")` during startup (ArduinoLib/Arduino.cpp), which
                 // throws std::logic_error and crashes the process if HOME is
                 // unset (as it is on Android). Point it at the app's private dir.
-                // First-run auto-location: on the very first launch the config
-                // dir (~/.hamclock/) does not exist yet. In that case add "-g -k"
-                // so the server geolocates the device's Latitude/Longitude from its
-                // public IP and skips the manual setup screen -- beginners never
-                // have to enter raw coordinates. geolocateIP() also fills in the
-                // Maidenhead grid and timezone. Later launches omit the flags so a
-                // location the user sets by hand is never overwritten by a fresh
-                // IP lookup. (N.B. -k is required by -g; see ArduinoLib/Arduino.cpp)
-                val firstRun = !File(filesDir, ".hamclock").exists()
+                // Launch without auto-geolocation flags. The user sets their
+                // location in HamClock's setup screen if needed. Avoids blocking
+                // on IP geolocation when the device has no internet, which would
+                // prevent the server from ever opening port 8081.
                 val cmd = mutableListOf(bin.absolutePath)
-                if (firstRun) {
-                    cmd += "-g"   // auto-locate DE lat/long/grid/tz from public IP
-                    cmd += "-k"   // required by -g; skip the manual setup screen
-                    Log.i(TAG, "first run: launching with -g -k (IP auto-geolocation)")
-                }
                 val pb = ProcessBuilder(*cmd.toTypedArray())
                     .directory(filesDir)
                     .redirectErrorStream(true)
@@ -785,14 +775,15 @@ class MainActivity : AppCompatActivity() {
                     "(nativeLibraryDir=${applicationInfo.nativeLibraryDir})"
             )
         }
+        // Copy binary to filesDir and make it executable.
+        // On Android the nativeLibraryDir is not executable via execve() from
+        // the app's data directory, so we copy to filesDir where we can set
+        // proper permissions.
         val dst = File(filesDir, "hamclock")
-        try {
-            src.copyTo(dst, overwrite = true)
-            dst.setExecutable(true, false)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to copy native binary to filesDir: $e", e)
-        }
-        return if (dst.exists()) dst else src
+        dst.parentFile.mkdirs()
+        dst.writeBytes(Files.readAllBytes(src.toPath()))
+        dst.setExecutable(true)
+        return dst
     }
 
     private fun waitForServer(timeoutMs: Long = 20_000): Boolean {
