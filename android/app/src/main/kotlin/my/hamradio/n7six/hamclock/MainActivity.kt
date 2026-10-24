@@ -443,6 +443,18 @@ class MainActivity : AppCompatActivity() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             return proxyLocalRequest(request.url.toString())
         }
+
+        override fun onReceivedError(view: WebView, request: WebResourceRequest, error: android.webkit.WebResourceError) {
+            val url = request.url?.toString() ?: ""
+            if (isLocalHamClockUrl(url)) {
+                Log.i(TAG, "Local server connection lost/restarting ($url), auto-reconnecting...")
+                thread {
+                    if (waitForServer(30_000)) {
+                        runOnUiThread { view.loadUrl(URL_TO_LOAD) }
+                    }
+                }
+            }
+        }
     }
 
     /** API 17-20: legacy String overloads only (no WebResourceRequest refs). */
@@ -461,6 +473,19 @@ class MainActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         override fun shouldInterceptRequest(view: WebView, url: String): WebResourceResponse? {
             return proxyLocalRequest(url)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onReceivedError(view: WebView, errorCode: Int, description: String?, failingUrl: String?) {
+            val url = failingUrl ?: ""
+            if (isLocalHamClockUrl(url)) {
+                Log.i(TAG, "Legacy Local server connection lost/restarting ($url), auto-reconnecting...")
+                thread {
+                    if (waitForServer(30_000)) {
+                        runOnUiThread { view.loadUrl(URL_TO_LOAD) }
+                    }
+                }
+            }
         }
     }
 
@@ -753,14 +778,21 @@ class MainActivity : AppCompatActivity() {
      * No per-ABI selection is needed here â€” the OS already placed the right ABI.
      */
     private fun nativeServerFile(): File {
-        val f = File(applicationInfo.nativeLibraryDir, "libhamclock.so")
-        if (!f.exists()) {
+        val src = File(applicationInfo.nativeLibraryDir, "libhamclock.so")
+        if (!src.exists()) {
             throw IllegalStateException(
-                "native server binary missing: ${f.absolutePath} " +
+                "native server binary missing: ${src.absolutePath} " +
                     "(nativeLibraryDir=${applicationInfo.nativeLibraryDir})"
             )
         }
-        return f
+        val dst = File(filesDir, "hamclock")
+        try {
+            src.copyTo(dst, overwrite = true)
+            dst.setExecutable(true, false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to copy native binary to filesDir: $e", e)
+        }
+        return if (dst.exists()) dst else src
     }
 
     private fun waitForServer(timeoutMs: Long = 20_000): Boolean {

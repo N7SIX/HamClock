@@ -73,11 +73,14 @@ const char manager_html[] = R"HCDB(
       const pw = $('pw_in').value;
       if(!pw){ $('msg_err').style.display='block'; return; }
       btn.disabled=true; btn.textContent='Resetting...';
+      $('msg_err').style.display='none';
       const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/command?cfgreset=true&pw='+encodeURIComponent(pw), false);
+      xhr.open('POST', '/command?cfgreset=true&pw='+encodeURIComponent(pw), true);
       xhr.send();
-      if(xhr.status===200) location.reload();
-      else { $('msg_err').style.display='block'; btn.disabled=false; btn.textContent='Factory Reset'; }
+      $('msg').style.display='block';
+      setTimeout(function(){
+        location.href = '/live.html';
+      }, 2500);
     }
   </script>
 </body>

@@ -107,4 +107,15 @@ bool android_get_clipboard(char *buf, size_t buf_len)
     return false;
 }
 
+/* Provide random() and srandom() for older Android Bionic libc (API 17) */
+long random(void)
+{
+    return rand();
+}
+
+void srandom(unsigned int seed)
+{
+    srand(seed);
+}
+
 } /* extern "C" */
